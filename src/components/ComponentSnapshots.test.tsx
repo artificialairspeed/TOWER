@@ -16,7 +16,6 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { ApplicationSelector } from './ApplicationSelector';
 import { DeploymentInfoSection } from './DeploymentInfoSection';
 import { ScheduleSection } from './ScheduleSection';
-import { OutageSection } from './OutageSection';
 import { ChangeItemsSection } from './ChangeItemsSection';
 import { ImpactSection } from './ImpactSection';
 import { ContactSection } from './ContactSection';
@@ -58,8 +57,6 @@ const createMockFormData = (overrides: Partial<DeploymentFormData> = {}): Deploy
   startDateTime: new Date('2025-01-15T20:00:00'),
   endDateTime: new Date('2025-01-15T22:00:00'),
   hasOutage: false,
-  outageStartDateTime: null,
-  outageEndDateTime: null,
   changeItems: [createMockChangeItem('ci-1', '', '')],
   impactItems: [createMockImpactItem('ii-1', '')],
   contactName: '',
@@ -233,57 +230,6 @@ describe('ScheduleSection Component Snapshots', () => {
           onStartDateTimeChange={vi.fn()}
           onEndDateTimeChange={vi.fn()}
           endDateTimeError="End time must be later than start time"
-        />
-      )
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('OutageSection Component Snapshots', () => {
-  it('should match snapshot: outage disabled (indicator No)', () => {
-    const { container } = render(
-      withTheme(
-        <OutageSection
-          hasOutage={false}
-          outageStartDateTime={null}
-          outageEndDateTime={null}
-          onOutageIndicatorChange={vi.fn()}
-          onOutageStartDateTimeChange={vi.fn()}
-          onOutageEndDateTimeChange={vi.fn()}
-        />
-      )
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('should match snapshot: outage enabled with date-time pickers (indicator Yes)', () => {
-    const { container } = render(
-      withTheme(
-        <OutageSection
-          hasOutage={true}
-          outageStartDateTime={new Date('2025-01-15T08:00:00')}
-          outageEndDateTime={new Date('2025-01-15T10:00:00')}
-          onOutageIndicatorChange={vi.fn()}
-          onOutageStartDateTimeChange={vi.fn()}
-          onOutageEndDateTimeChange={vi.fn()}
-        />
-      )
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('should match snapshot: with outage validation error', () => {
-    const { container } = render(
-      withTheme(
-        <OutageSection
-          hasOutage={true}
-          outageStartDateTime={new Date('2025-01-15T10:00:00')}
-          outageEndDateTime={new Date('2025-01-15T08:00:00')}
-          onOutageIndicatorChange={vi.fn()}
-          onOutageStartDateTimeChange={vi.fn()}
-          onOutageEndDateTimeChange={vi.fn()}
-          outageEndDateTimeError="Outage end time must be later than outage start time"
         />
       )
     );

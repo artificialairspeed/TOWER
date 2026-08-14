@@ -24,7 +24,6 @@ import { ImpactSection } from './ImpactSection';
 import { ContactSection } from './ContactSection';
 import { DeploymentInfoSection } from './DeploymentInfoSection';
 import { ScheduleSection } from './ScheduleSection';
-import { OutageSection } from './OutageSection';
 import { ApplicationSelector } from './ApplicationSelector';
 import { DeploymentForm } from './DeploymentForm';
 import { DeploymentQueueRow } from './DeploymentQueueRow';
@@ -440,6 +439,8 @@ describe('22.2.5 Component memoization coverage', () => {
             endDateTime={new Date(now.getTime() + 2 * 60 * 60 * 1000)}
             onStartDateTimeChange={() => {}}
             onEndDateTimeChange={() => {}}
+            hasOutage={false}
+            onHasOutageChange={() => {}}
           />
         </div>
       );
@@ -450,33 +451,6 @@ describe('22.2.5 Component memoization coverage', () => {
     // Component should render with date pickers
     const startLabel = screen.getByLabelText(/Deployment Start/i);
     expect(startLabel).toBeInTheDocument();
-  });
-
-  it('OutageSection is memoized', () => {
-    const [parentState, setParentState] = useState(0);
-
-    function Parent() {
-      return (
-        <div>
-          <button onClick={() => setParentState(s => s + 1)}>
-            Re-render ({parentState})
-          </button>
-          <OutageSection
-            hasOutage={false}
-            outageStartDateTime={null}
-            outageEndDateTime={null}
-            onHasOutageChange={() => {}}
-            onOutageStartDateTimeChange={() => {}}
-            onOutageEndDateTimeChange={() => {}}
-          />
-        </div>
-      );
-    }
-
-    render(<Parent />);
-    
-    // Verify outage section renders
-    expect(screen.getByLabelText(/Does this deployment include an outage/i)).toBeInTheDocument();
   });
 
   it('ApplicationSelector is memoized', () => {

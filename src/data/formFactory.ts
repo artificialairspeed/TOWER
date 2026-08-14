@@ -31,14 +31,15 @@ function generateItemId(): string {
 }
 
 /**
- * Creates a Date object set to today at the specified time (24-hour format)
+ * Creates a Date object set to tomorrow at the specified time (24-hour format)
  * 
  * @param hours - Hour in 24-hour format (0-23)
  * @param minutes - Minute (0-59)
- * @returns Date object set to today at the specified time
+ * @returns Date object set to tomorrow at the specified time
  */
 function createDateTimeToday(hours: number, minutes: number = 0): Date {
   const date = new Date();
+  date.setDate(date.getDate() + 1); // Set to tomorrow
   date.setHours(hours, minutes, 0, 0); // Set hours, minutes, seconds=0, ms=0
   return date;
 }
@@ -74,7 +75,7 @@ function createDefaultImpactItem(): ImpactItem {
  * Creates a default DeploymentFormData instance with creation-time defaults
  * 
  * Default values per requirements:
- * - deployment date: today
+ * - deployment date: tomorrow
  * - start time: 20:00 (8:00 PM)
  * - end time: 22:00 (10:00 PM)
  * - hasOutage: false
@@ -101,14 +102,12 @@ export function createDefaultForm(): DeploymentFormData {
     environment: null,
     deploymentTitle: '', // Computed, starts empty
     
-    // Schedule (default: today at 20:00-22:00)
+    // Schedule (default: tomorrow at 20:00-22:00)
     startDateTime: createDateTimeToday(20, 0), // 20:00 = 8:00 PM
     endDateTime: createDateTimeToday(22, 0),   // 22:00 = 10:00 PM
     
     // Outage Information (default: no outage)
     hasOutage: false,
-    outageStartDateTime: null,
-    outageEndDateTime: null,
     
     // Change Items (default: one empty item)
     changeItems: [createDefaultChangeItem()],

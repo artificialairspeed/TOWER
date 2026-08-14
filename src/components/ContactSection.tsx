@@ -63,77 +63,99 @@ function ContactSectionComponent({
         Contact Information
       </Typography>
 
-      {/* Contact Name Input - Requirements: 8.1, 8.4 */}
-      <TextField
-        fullWidth
-        required
-        label="Contact Name"
-        value={contactName}
-        onChange={(e) => onContactNameChange(e.target.value)}
-        onBlur={() => onBlurValidate?.('contactName', contactName)}
-        error={!!contactNameError}
-        helperText={contactNameError || 'Max 255 characters'}
-        slotProps={{
-          htmlInput: {
-            maxLength: 255,
-            'aria-label': 'Contact name',
-            'aria-describedby': contactNameError ? 'contact-name-error' : 'contact-name-help',
-            'aria-invalid': !!contactNameError
-          }
-        }}
-        sx={{ mb: 2 }}
-      />
+      {/* All 3 fields on same row */}
+      <Box sx={{ display: 'flex', gap: 2, flexWrap: { xs: 'wrap', sm: 'nowrap' }, alignItems: 'flex-start' }}>
+        {/* Contact Name Input - Requirements: 8.1, 8.4 */}
+        <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 33.33%' } }}>
+          <TextField
+            fullWidth
+            required
+            label="Contact Name"
+            value={contactName}
+            onChange={(e) => onContactNameChange(e.target.value)}
+            onBlur={() => onBlurValidate?.('contactName', contactName)}
+            error={!!contactNameError}
+            slotProps={{
+              htmlInput: {
+                maxLength: 255,
+                'aria-label': 'Contact name',
+                'aria-describedby': contactNameError ? 'contact-name-error' : 'contact-name-help',
+                'aria-invalid': !!contactNameError
+              },
+              inputLabel: {
+                shrink: true
+              }
+            }}
+          />
+        </Box>
 
-      {/* Email Input - Requirements: 8.1, 8.2, 8.4 */}
-      <TextField
-        fullWidth
-        required
-        type="email"
-        label="Email"
-        value={contactEmail}
-        onChange={(e) => onContactEmailChange(e.target.value)}
-        onBlur={() => onBlurValidate?.('contactEmail', contactEmail)}
-        error={!!contactEmailError}
-        helperText={contactEmailError || 'Valid email format required (example@domain.com)'}
-        slotProps={{
-          htmlInput: {
-            maxLength: 255,
-            'aria-label': 'Contact email address',
-            'aria-describedby': contactEmailError ? 'contact-email-error' : 'contact-email-help',
-            'aria-invalid': !!contactEmailError
-          }
-        }}
-        sx={{ mb: 2 }}
-      />
+        {/* Email Input - Requirements: 8.1, 8.2, 8.4 */}
+        <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 33.33%' } }}>
+          <TextField
+            fullWidth
+            required
+            type="email"
+            label="Email"
+            value={contactEmail}
+            onChange={(e) => onContactEmailChange(e.target.value)}
+            onBlur={() => onBlurValidate?.('contactEmail', contactEmail)}
+            error={!!contactEmailError}
+            slotProps={{
+              htmlInput: {
+                maxLength: 255,
+                'aria-label': 'Contact email address',
+                'aria-describedby': contactEmailError ? 'contact-email-error' : 'contact-email-help',
+                'aria-invalid': !!contactEmailError
+              },
+              inputLabel: {
+                shrink: true
+              }
+            }}
+          />
+        </Box>
 
-      {/* Phone Input - Requirements: 8.1, 8.4 */}
-      {/* Any format is accepted; it is normalized to (###) ###-#### on blur. */}
-      <TextField
-        fullWidth
-        required
-        type="tel"
-        label="Phone"
-        value={contactPhone}
-        onChange={(e) => onContactPhoneChange(e.target.value)}
-        onBlur={(e) => {
-          const formatted = formatPhoneNumber(e.target.value);
-          if (formatted !== contactPhone) {
-            onContactPhoneChange(formatted);
-          }
-          onBlurValidate?.('contactPhone', formatted);
-        }}
-        error={!!contactPhoneError}
-        helperText={contactPhoneError || 'Any format accepted. Format: (###) ###-#### applied automatically'}
-        slotProps={{
-          htmlInput: {
-            maxLength: 255,
-            'aria-label': 'Contact phone number',
-            'aria-describedby': contactPhoneError ? 'contact-phone-error' : 'contact-phone-help',
-            'aria-invalid': !!contactPhoneError
-          }
-        }}
-        sx={{ mb: 2 }}
-      />
+        {/* Phone Input - Requirements: 8.1, 8.4 */}
+        {/* Only allows 10-digit phone numbers, accepts numerics only on input */}
+        <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 33.33%' } }}>
+          <TextField
+            fullWidth
+            required
+            type="tel"
+            label="Phone"
+            value={contactPhone}
+            onChange={(e) => {
+              // Only allow digits
+              const input = e.target.value;
+              const digitsOnly = input.replace(/\D/g, '');
+              
+              // Accept only if input is digits and at most 10 digits
+              if (digitsOnly.length <= 10 && digitsOnly === input) {
+                onContactPhoneChange(input);
+              }
+            }}
+            onBlur={(e) => {
+              const formatted = formatPhoneNumber(e.target.value);
+              if (formatted !== contactPhone) {
+                onContactPhoneChange(formatted);
+              }
+              onBlurValidate?.('contactPhone', formatted);
+            }}
+            error={!!contactPhoneError}
+            slotProps={{
+              htmlInput: {
+                maxLength: 10,
+                placeholder: '5551234567',
+                'aria-label': 'Contact phone number',
+                'aria-describedby': contactPhoneError ? 'contact-phone-error' : 'contact-phone-help',
+                'aria-invalid': !!contactPhoneError
+              },
+              inputLabel: {
+                shrink: true
+              }
+            }}
+          />
+        </Box>
+      </Box>
     </Box>
   );
 }

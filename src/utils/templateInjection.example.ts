@@ -59,7 +59,8 @@ const exampleTemplate = `
     <p><strong>Title:</strong> {{DEPLOYMENT_TITLE}}</p>
     <p><strong>Change Number:</strong> {{DEPLOYMENT_ID}}</p>
     <p><strong>Schedule:</strong> {{DEPLOYMENT_SCHEDULE}}</p>
-    <p><strong>Outage:</strong> {{OUTAGE_WINDOW}}</p>
+    <p><strong>Outage:</strong> {{OUTAGE_INDICATOR}}</p>
+    <p><strong>Outage Window:</strong> {{OUTAGE_WINDOW}}</p>
   </section>
   
   <section>
@@ -93,6 +94,7 @@ console.log('- {{NOTIFICATION_HEADER}}');
 console.log('- {{DEPLOYMENT_TITLE}}');
 console.log('- {{DEPLOYMENT_ID}}');
 console.log('- {{DEPLOYMENT_SCHEDULE}}');
+console.log('- {{OUTAGE_INDICATOR}}');
 console.log('- {{OUTAGE_WINDOW}}');
 console.log('- {{CHANGE_ITEMS}}');
 console.log('- {{IMPACT_ITEMS}}');

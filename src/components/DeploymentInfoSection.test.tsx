@@ -367,23 +367,7 @@ describe('DeploymentInfoSection', () => {
       const select = screen.getByLabelText('Deployment environment');
       expect(select).toHaveTextContent('PROD');
     });
-    
-    it('should clear environment by selecting placeholder', async () => {
-      const onEnvironmentChange = vi.fn();
-      
-      renderComponent({
-        environment: 'PROD',
-        onEnvironmentChange,
-      });
-      
-      const select = screen.getByLabelText('Deployment environment');
-      fireEvent.mouseDown(select);
-      
-      const placeholder = screen.getByText('Select Environment');
-      fireEvent.click(placeholder);
-      
-      expect(onEnvironmentChange).toHaveBeenCalledWith(null);
-    });
+
   });
   
   // =========================================================================

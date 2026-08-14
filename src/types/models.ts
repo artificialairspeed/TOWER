@@ -142,7 +142,7 @@ export interface DeploymentFormData {
   environment: Environment | null;
   
   /** Computed deployment title (read-only, derived from other fields)
-   * Format: [CHG#####] — [Application Name: Release Version - Deploy to ENVIRONMENT]
+   * Format: CHG##### — Application Name: Release Version
    */
   deploymentTitle: string;
   
@@ -157,14 +157,8 @@ export interface DeploymentFormData {
   /** Whether this deployment includes an outage (default: false) */
   hasOutage: boolean;
   
-  /** Outage start date/time (required if hasOutage is true) */
-  outageStartDateTime: Date | null;
-  
-  /** Outage end date/time (required if hasOutage is true) */
-  outageEndDateTime: Date | null;
-  
   // ===== Change Items =====
-  /** List of Jira change items (1-999 items required) */
+  /** List of Jira change items */
   changeItems: ChangeItem[];
   
   // ===== Impact Items =====

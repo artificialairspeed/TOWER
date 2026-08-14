@@ -93,11 +93,10 @@ describe('ChangeItemsSection', () => {
         />
       );
 
-      const headings = screen.getAllByText(/Change Item \d+/);
-      expect(headings).toHaveLength(3);
-      expect(headings[0]).toHaveTextContent('Change Item 1');
-      expect(headings[1]).toHaveTextContent('Change Item 2');
-      expect(headings[2]).toHaveTextContent('Change Item 3');
+      // Verify items are rendered with circular badges using aria-labels
+      expect(screen.getByLabelText('Change item 1')).toHaveTextContent('1');
+      expect(screen.getByLabelText('Change item 2')).toHaveTextContent('2');
+      expect(screen.getByLabelText('Change item 3')).toHaveTextContent('3');
     });
   });
 
@@ -390,8 +389,12 @@ describe('ChangeItemsSection', () => {
         />
       );
 
-      expect(screen.getByText('Max 50 characters')).toBeInTheDocument();
-      expect(screen.getByText('Max 500 characters')).toBeInTheDocument();
+      // Verify input fields have max length attributes
+      const jiraInputs = screen.getAllByLabelText(/Jira number/i);
+      const descriptionInputs = screen.getAllByLabelText(/Description/i);
+      
+      expect(jiraInputs[0]).toHaveAttribute('maxLength', '50');
+      expect(descriptionInputs[0]).toHaveAttribute('maxLength', '500');
     });
   });
 
@@ -663,16 +666,17 @@ describe('ChangeItemsSection', () => {
         description: `Feature ${i}`
       }));
 
-      const { container } = render(
+      render(
         <ChangeItemsSection
           changeItems={largeItems}
           onChange={onChangeMock}
         />
       );
 
-      // MUI Paper component renders as div by default, check for subtitle2 headings (one per item)
-      const itemHeadings = screen.getAllByText(/Change Item \d+/);
-      expect(itemHeadings).toHaveLength(50);
+      // Verify all items are rendered with circular badges (one per item)
+      for (let i = 1; i <= 50; i++) {
+        expect(screen.getByLabelText(`Change item ${i}`)).toBeInTheDocument();
+      }
     });
 
     it('preserves other items when one is modified', async () => {
@@ -735,7 +739,7 @@ describe('ChangeItemsSection', () => {
       );
 
       for (let i = 0; i < 10; i++) {
-        expect(screen.getByText(`Change Item ${i + 1}`)).toBeInTheDocument();
+        expect(screen.getByLabelText(`Change item ${i + 1}`)).toHaveTextContent(`${i + 1}`);
       }
     });
   });

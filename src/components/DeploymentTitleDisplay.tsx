@@ -77,7 +77,6 @@ function DeploymentTitleDisplayComponent({ data }: DeploymentTitleDisplayProps) 
           readOnly: true
         }
       }}
-      helperText="This field is automatically generated from the application, change number, release version, and environment"
       margin="normal"
     />
   );

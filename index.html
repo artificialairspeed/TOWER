@@ -5,6 +5,11 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TOWER — Takeoff Notifications for Technology Deployments</title>
+    
+    <!-- Inter Font: Exclusive font family for the entire application -->
+    <link rel="preconnect" href="https://rsms.me/" />
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+    
     <style>
       /* Ensure full height and no margin for proper background coverage */
       html, body, #root {
@@ -16,6 +21,11 @@
       /* Smooth scrolling when focus/expansion moves the viewport */
       html {
         scroll-behavior: smooth;
+      }
+
+      /* Global Inter font enforcement - no other fonts allowed anywhere */
+      * {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
       }
 
       /*

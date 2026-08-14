@@ -45,7 +45,30 @@ function ValidationErrorSummaryComponent({
   const getFieldLabel = (field: string): string => {
     // Handle array fields (e.g., "changeItems[0].jiraNumber")
     if (field.includes('[')) {
-      return field; // Already formatted in validation message
+      // Parse the field to extract item index and sub-field
+      const match = field.match(/(\w+)\[(\d+)\]\.(\w+)/);
+      if (match) {
+        const [, arrayName, , subField] = match;
+        
+        // Map array field names to user-friendly labels
+        const arrayLabels: Record<string, string> = {
+          changeItems: 'Change Item',
+          impactItems: 'Impact Item'
+        };
+        
+        // Map sub-field names to labels
+        const subFieldLabels: Record<string, string> = {
+          jiraNumber: 'Jira Number',
+          description: 'Title/Description',
+          text: 'Text'
+        };
+        
+        const arrayLabel = arrayName ? (arrayLabels[arrayName] || arrayName) : 'Item';
+        const subFieldLabel = subField ? (subFieldLabels[subField] || subField) : 'Field';
+        
+        return `${arrayLabel}: ${subFieldLabel}`;
+      }
+      return field; // Return as-is if parsing fails
     }
 
     // Map field names to user-friendly labels
@@ -56,8 +79,6 @@ function ValidationErrorSummaryComponent({
       environment: 'Environment',
       startDateTime: 'Deployment Start',
       endDateTime: 'Deployment End',
-      outageStartDateTime: 'Outage Start',
-      outageEndDateTime: 'Outage End',
       changeItems: 'Change Items',
       impactItems: 'Impact Items',
       contactName: 'Contact Name',
@@ -66,6 +87,22 @@ function ValidationErrorSummaryComponent({
     };
 
     return fieldLabels[field] || field;
+  };
+
+  /**
+   * Format error message to be more user-friendly
+   */
+  const formatErrorMessage = (message: string): string => {
+    // Remove '#' symbols from message
+    const cleanMessage = message.replace(/#/g, '');
+    
+    // Handle "is required" or "Please select" messages
+    if (cleanMessage.includes('is required') || cleanMessage.includes('Please select')) {
+      return 'This field is required';
+    }
+    
+    // Return cleaned message as-is if it doesn't match known patterns
+    return cleanMessage;
   };
 
   return (
@@ -86,15 +123,15 @@ function ValidationErrorSummaryComponent({
       </Typography>
 
       <Box sx={{ pl: 2 }}>
-        <List dense disablePadding>
+        <List disablePadding sx={{ listStyleType: 'disc', ml: 2 }}>
           {errors.map((error, index) => (
             <ListItem 
               key={`${error.field}-${index}`}
               disablePadding
-              sx={{ display: 'list-item', listStyleType: 'disc', ml: 2 }}
+              sx={{ display: 'list-item', py: 0.75 }}
             >
               <Typography variant="body2">
-                <strong>{getFieldLabel(error.field)}:</strong> {error.message}
+                <strong>{getFieldLabel(error.field)}:</strong> {formatErrorMessage(error.message)}
               </Typography>
             </ListItem>
           ))}

@@ -13,7 +13,7 @@ export {
   escapeHtml,
   renderChangeItems,
   renderImpactItems,
-  renderOutageSection,
+  renderOutageIndicator,
   injectTemplate
 } from './formatters';
 export { templateProvider, TemplateProvider } from './templateProvider';

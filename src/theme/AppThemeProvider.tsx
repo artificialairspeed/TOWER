@@ -6,6 +6,9 @@
  * The portal is dark-mode only (both the app UI and the generated outputs use
  * dark mode). The `theme` prop is retained for API compatibility, but the portal
  * always renders the dark palette regardless of its value.
+ *
+ * Font: Inter is the exclusive font family used throughout the entire application.
+ * No other fonts are permitted anywhere in the UI.
  */
 
 import React from 'react';
@@ -37,10 +40,18 @@ export const darkTokens = {
   focusRing: '#7ab3e3',
 } as const;
 
+// ---------------------------------------------------------------------------
+// Inter Font Configuration
+// ---------------------------------------------------------------------------
+// Inter is the exclusive font family for the entire application.
+// Fallback stack ensures Inter is used on all platforms.
+const INTER_FONT_FAMILY = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+
 /**
  * AppThemeProvider component
  *
- * Wraps the application with a Material-UI ThemeProvider using the dark palette.
+ * Wraps the application with a Material-UI ThemeProvider using the dark palette
+ * and enforcing Inter font exclusively across all typography.
  */
 export function AppThemeProvider({ children }: AppThemeProviderProps) {
   const muiTheme = React.useMemo(() => {
@@ -72,11 +83,65 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
       shape: {
         borderRadius: 8,
       },
+      typography: {
+        fontFamily: INTER_FONT_FAMILY,
+        // Override all typography variants to ensure Inter font
+        h1: {
+          fontFamily: INTER_FONT_FAMILY,
+        },
+        h2: {
+          fontFamily: INTER_FONT_FAMILY,
+        },
+        h3: {
+          fontFamily: INTER_FONT_FAMILY,
+        },
+        h4: {
+          fontFamily: INTER_FONT_FAMILY,
+        },
+        h5: {
+          fontFamily: INTER_FONT_FAMILY,
+        },
+        h6: {
+          fontFamily: INTER_FONT_FAMILY,
+        },
+        body1: {
+          fontFamily: INTER_FONT_FAMILY,
+        },
+        body2: {
+          fontFamily: INTER_FONT_FAMILY,
+        },
+        subtitle1: {
+          fontFamily: INTER_FONT_FAMILY,
+        },
+        subtitle2: {
+          fontFamily: INTER_FONT_FAMILY,
+        },
+        button: {
+          fontFamily: INTER_FONT_FAMILY,
+        },
+        caption: {
+          fontFamily: INTER_FONT_FAMILY,
+        },
+        overline: {
+          fontFamily: INTER_FONT_FAMILY,
+        },
+      },
       components: {
         // Global baseline: consistent focus-visible ring for keyboard users
         // (WCAG 2.4.7) and a themed scrollbar.
         MuiCssBaseline: {
           styleOverrides: {
+            // Ensure Inter font on all elements
+            html: {
+              fontFamily: INTER_FONT_FAMILY,
+            },
+            body: {
+              fontFamily: INTER_FONT_FAMILY,
+            },
+            // Universal selector to guarantee no other fonts slip through
+            '*': {
+              fontFamily: `${INTER_FONT_FAMILY} !important`,
+            },
             'a, button, [role="button"], input, select, textarea, [tabindex]': {
               '&:focus-visible': {
                 outline: `2px solid ${darkTokens.focusRing}`,
@@ -102,6 +167,7 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
         MuiContainer: {
           styleOverrides: {
             root: {
+              fontFamily: INTER_FONT_FAMILY,
               transition: 'background-color 0.3s ease-in-out',
             },
           },
@@ -109,6 +175,7 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
         MuiPaper: {
           styleOverrides: {
             root: {
+              fontFamily: INTER_FONT_FAMILY,
               backgroundImage: 'none', // Remove MUI default elevation gradient
               transition:
                 'background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
@@ -118,7 +185,9 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
         MuiTextField: {
           styleOverrides: {
             root: {
+              fontFamily: INTER_FONT_FAMILY,
               '& .MuiOutlinedInput-root': {
+                fontFamily: INTER_FONT_FAMILY,
                 backgroundColor: darkTokens.bg,
                 '& fieldset': {
                   borderColor: darkTokens.divider,
@@ -129,9 +198,20 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
                 '&.Mui-focused fieldset': {
                   borderColor: darkTokens.primary,
                 },
+                '&.Mui-error fieldset': {
+                  borderColor: 'currentColor', // Uses error color from FormControl
+                  borderWidth: 2,
+                },
+                '&.Mui-error:hover fieldset': {
+                  borderColor: 'currentColor',
+                },
               },
               '& .MuiInputLabel-root': {
+                fontFamily: INTER_FONT_FAMILY,
                 color: darkTokens.textSecondary,
+              },
+              '& .MuiInputBase-input': {
+                fontFamily: INTER_FONT_FAMILY,
               },
             },
           },
@@ -139,6 +219,7 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
         MuiButton: {
           styleOverrides: {
             root: {
+              fontFamily: INTER_FONT_FAMILY,
               textTransform: 'none',
               fontWeight: 500,
               borderRadius: 6,
@@ -148,6 +229,27 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
                   boxShadow: '0 4px 12px rgba(91, 157, 217, 0.25)',
                 },
               },
+            },
+          },
+        },
+        MuiAlert: {
+          styleOverrides: {
+            root: {
+              fontFamily: INTER_FONT_FAMILY,
+            },
+          },
+        },
+        MuiAlertTitle: {
+          styleOverrides: {
+            root: {
+              fontFamily: INTER_FONT_FAMILY,
+            },
+          },
+        },
+        MuiTypography: {
+          styleOverrides: {
+            root: {
+              fontFamily: INTER_FONT_FAMILY,
             },
           },
         },

@@ -36,7 +36,7 @@ export function formatPhoneNumber(phone: string): string {
     digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;
 
   if (local.length !== 10) {
-    // Not enough (or too many) digits to format confidently; leave as entered.
+    // Must be exactly 10 digits; leave as entered if not valid
     return phone;
   }
 
@@ -50,13 +50,12 @@ export function formatPhoneNumber(phone: string): string {
 /**
  * Generates the deployment title in the required format
  * 
- * Format: [CHG#####] — [Application Name: Release Version - Deploy to ENVIRONMENT]
+ * Format: CHG##### — Application Name: Release Version
  * 
  * Returns an empty string if any required component is missing:
  * - Application
  * - Change Number
  * - Release Version
- * - Environment
  * 
  * Requirements: 2.4, 2.5, 3.6
  * 
@@ -71,37 +70,44 @@ export function formatPhoneNumber(phone: string): string {
  *   environment: 'PROD',
  *   ...
  * })
- * // Returns: "[CHG12345] — [Crew Portal: v5.4.1 - Deploy to PROD]"
+ * // Returns: "CHG12345 — Crew Portal: v5.4.1"
  */
 export function generateDeploymentTitle(data: DeploymentFormData): string {
   // Check if all required components are present
-  if (!data.application || !data.changeNumber || !data.releaseVersion || !data.environment) {
+  if (!data.application || !data.changeNumber || !data.releaseVersion) {
     return '';
   }
   
   // Extract application name
   const applicationName = data.application.name;
   
-  // Build the title in the required format
-  return `[${data.changeNumber}] — [${applicationName}: ${data.releaseVersion} - Deploy to ${data.environment}]`;
+  // Build the title in the required format (without environment)
+  // CHG prefix is appended to the Change Number for display
+  // PI is shown in the notification header, so not repeated here
+  return `CHG${data.changeNumber} — ${applicationName}`;
 }
 
 /**
- * Generates the notification header for a given application name
+ * Generates the notification header for a given environment
  * 
- * The header follows the pattern: "{Application Name} Deployment Notification"
+ * The header follows the pattern: "{Environment} Deployment Notification"
  * 
  * Requirements: 2.5
  * 
- * @param applicationName - The name of the application
+ * @param _applicationName - The name of the application (not used, kept for backward compatibility)
+ * @param environment - The deployment environment (PROD, QA, ITEST, DEV)
  * @returns The formatted notification header
  * 
  * @example
- * generateNotificationHeader('Crew Portal')
- * // Returns: "Crew Portal Deployment Notification"
+ * generateNotificationHeader('Crew Portal', 'PROD')
+ * // Returns: "PROD Deployment Notification"
  */
-export function generateNotificationHeader(applicationName: string): string {
-  return `${applicationName} Deployment Notification`;
+export function generateNotificationHeader(_applicationName: string, environment: string | null, piNumber: string = ''): string {
+  const piText = piNumber ? ` | PI ${piNumber}` : '';
+  if (environment) {
+    return `${environment} Deployment Notification${piText}`;
+  }
+  return `Deployment Notification${piText}`;
 }
 
 // ============================================================================
@@ -284,81 +290,30 @@ export function renderImpactItems(items: ImpactItem[]): string {
   const listItems = items
     .map(item => {
       const escapedText = escapeHtml(item.text);
-      return `<li>${escapedText}</li>`;
+      return `<div>• ${escapedText}</div>`;
     })
     .join('\n');
   
-  return `<ul>\n${listItems}\n</ul>`;
+  return `${listItems}`;
 }
 
 /**
- * Renders the outage section for the deployment notification
+ * Renders the outage indicator (Yes or No) for the deployment notification
  * 
- * If hasOutage is false, returns an empty string.
- * If hasOutage is true, formats the outage window as a date/time range.
- * 
- * Format when outage exists:
- * "Outage Window: Month DD, YYYY, HH:MM AM/PM–Month DD, YYYY, HH:MM AM/PM"
- * 
- * All dates and times are HTML-escaped (though date formatting shouldn't produce
- * HTML-special characters, we escape for consistency and safety).
- * 
- * Requirements: 7.8 (outage rendering)
+ * This shows whether an outage is present, independent of outage window details.
  * 
  * @param hasOutage - Whether the deployment includes an outage
- * @param outageStartDateTime - Start date/time of the outage (required if hasOutage is true)
- * @param outageEndDateTime - End date/time of the outage (required if hasOutage is true)
- * @returns HTML string for the outage section, or empty string if no outage
+ * @returns HTML string showing "Yes" or "No"
  * 
  * @example
- * renderOutageSection(
- *   true,
- *   new Date('2025-03-05T20:00:00'),
- *   new Date('2025-03-05T22:00:00')
- * )
- * // Returns: "Outage Window: March 05, 2025, 08:00 PM–March 05, 2025, 10:00 PM"
+ * renderOutageIndicator(true)
+ * // Returns: "Yes"
  * 
- * renderOutageSection(false, null, null)
- * // Returns: ""
+ * renderOutageIndicator(false)
+ * // Returns: "No"
  */
-export function renderOutageSection(
-  hasOutage: boolean,
-  outageStartDateTime: Date | null,
-  outageEndDateTime: Date | null
-): string {
-  if (!hasOutage) {
-    return '';
-  }
-  
-  // If outage is indicated but dates/times are missing, return empty
-  // (validation should catch this, but we handle gracefully)
-  if (!outageStartDateTime || !outageEndDateTime) {
-    return '';
-  }
-  
-  // Format start date and time
-  const dateFormatter = new Intl.DateTimeFormat('en-US', {
-    month: 'long',
-    day: '2-digit',
-    year: 'numeric'
-  });
-  const timeFormatter = new Intl.DateTimeFormat('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  });
-  
-  const startDatePart = dateFormatter.format(outageStartDateTime);
-  const startTimePart = timeFormatter.format(outageStartDateTime);
-  
-  const endDatePart = dateFormatter.format(outageEndDateTime);
-  const endTimePart = timeFormatter.format(outageEndDateTime);
-  
-  // Combine into outage window format
-  const outageWindow = `Outage Window: ${startDatePart}, ${startTimePart}–${endDatePart}, ${endTimePart}`;
-  
-  // Escape for safety (though dates shouldn't contain HTML-special chars)
-  return escapeHtml(outageWindow);
+export function renderOutageIndicator(hasOutage: boolean): string {
+  return hasOutage ? 'Yes' : 'No';
 }
 
 // ============================================================================
@@ -376,6 +331,7 @@ export function renderOutageSection(
  * - {{DEPLOYMENT_TITLE}} - Computed deployment title
  * - {{DEPLOYMENT_SUBTITLE}} - Change number (deployment ID)
  * - {{SCHEDULE}} - Formatted deployment date and time window
+ * - {{OUTAGE_INDICATOR}} - Outage Yes/No indicator
  * - {{OUTAGE_BLOCK}} - Formatted outage window (or empty if no outage)
  * - {{JIRA_ITEMS}} - Rendered HTML list of change items (Jira items)
  * - {{IMPACT_ITEMS}} - Rendered HTML unordered list of impact items
@@ -409,7 +365,7 @@ export function renderOutageSection(
 export function injectTemplate(template: string, data: DeploymentFormData): string {
   // Generate notification header
   const notificationHeader = data.application 
-    ? generateNotificationHeader(data.application.name)
+    ? generateNotificationHeader(data.application.name, data.environment, data.releaseVersion)
     : '';
   
   // Generate deployment title
@@ -421,12 +377,8 @@ export function injectTemplate(template: string, data: DeploymentFormData): stri
     data.endDateTime
   );
   
-  // Render outage section
-  const outageWindow = renderOutageSection(
-    data.hasOutage,
-    data.outageStartDateTime,
-    data.outageEndDateTime
-  );
+  // Render outage indicator (Yes/No)
+  const outageIndicator = renderOutageIndicator(data.hasOutage);
   
   // Render change items as HTML
   const changeItemsHtml = renderChangeItems(data.changeItems);
@@ -435,7 +387,8 @@ export function injectTemplate(template: string, data: DeploymentFormData): stri
   const impactItemsHtml = renderImpactItems(data.impactItems);
   
   // Escape text tokens for security
-  const escapedChangeNumber = escapeHtml(data.changeNumber);
+  // CHG prefix is appended to the Change Number for HTML output display
+  const escapedChangeNumber = escapeHtml(`CHG${data.changeNumber}`);
   const escapedContactName = escapeHtml(data.contactName);
   const escapedContactEmail = escapeHtml(data.contactEmail);
   const escapedContactPhone = escapeHtml(data.contactPhone);
@@ -451,9 +404,11 @@ export function injectTemplate(template: string, data: DeploymentFormData): stri
   result = result.replace(/\{\{DEPLOYMENT_TITLE\}\}/g, deploymentTitle);
   result = result.replace(/\{\{DEPLOYMENT_SUBTITLE\}\}/g, escapedChangeNumber);
   result = result.replace(/\{\{SCHEDULE\}\}/g, deploymentSchedule);
+  result = result.replace(/\{\{OUTAGE_INDICATOR\}\}/g, outageIndicator);
   
   // Replace HTML tokens (verbatim - already contains safe HTML)
-  result = result.replace(/\{\{OUTAGE_BLOCK\}\}/g, outageWindow);
+  // OUTAGE_BLOCK/OUTAGE_WINDOW is empty since outage dates are no longer tracked separately
+  result = result.replace(/\{\{OUTAGE_BLOCK\}\}/g, '');
   result = result.replace(/\{\{JIRA_ITEMS\}\}/g, changeItemsHtml);
   result = result.replace(/\{\{IMPACT_ITEMS\}\}/g, impactItemsHtml);
   result = result.replace(/\{\{CONTACT\}\}/g, contactBlock);
@@ -461,7 +416,7 @@ export function injectTemplate(template: string, data: DeploymentFormData): stri
   // Support legacy token names for backward compatibility
   result = result.replace(/\{\{DEPLOYMENT_ID\}\}/g, escapedChangeNumber);
   result = result.replace(/\{\{DEPLOYMENT_SCHEDULE\}\}/g, deploymentSchedule);
-  result = result.replace(/\{\{OUTAGE_WINDOW\}\}/g, outageWindow);
+  result = result.replace(/\{\{OUTAGE_WINDOW\}\}/g, '');
   result = result.replace(/\{\{CHANGE_ITEMS\}\}/g, changeItemsHtml);
   result = result.replace(/\{\{CONTACT_NAME\}\}/g, escapedContactName);
   result = result.replace(/\{\{CONTACT_EMAIL\}\}/g, escapedContactEmail);

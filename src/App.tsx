@@ -52,7 +52,6 @@ function App() {
     addForm,
     removeForm,
     updateForm,
-    resetForm,
     canAddForm,
     canRemoveForm,
   } = useFormManager();
@@ -286,7 +285,6 @@ function App() {
           onAddForm={addForm}
           onRemoveForm={removeForm}
           onUpdateForm={updateForm}
-          onResetForm={resetForm}
           canAddForm={canAddForm}
           canRemoveForm={canRemoveForm}
           validationErrors={getAllErrors()}

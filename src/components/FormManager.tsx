@@ -45,8 +45,6 @@ export interface FormManagerProps {
   onRemoveForm?: (formId: string) => void;
   /** Update a form by id */
   onUpdateForm?: (formId: string, updates: Partial<DeploymentFormData>) => void;
-  /** Reset a form by id */
-  onResetForm?: (formId: string) => void;
   /** Whether adding a form is allowed */
   canAddForm?: boolean;
   /** Whether removing a form is allowed */
@@ -82,7 +80,6 @@ function FormManagerComponent({
   onAddForm,
   onRemoveForm,
   onUpdateForm,
-  onResetForm,
   canAddForm: canAddFormProp,
   canRemoveForm: canRemoveFormProp,
   validationErrors = [],
@@ -100,7 +97,6 @@ function FormManagerComponent({
   const addForm = onAddForm ?? internal.addForm;
   const removeForm = onRemoveForm ?? internal.removeForm;
   const updateForm = onUpdateForm ?? internal.updateForm;
-  const resetForm = onResetForm ?? internal.resetForm;
   const canAddForm = canAddFormProp ?? internal.canAddForm;
   const canRemoveForm = canRemoveFormProp ?? internal.canRemoveForm;
 
@@ -205,7 +201,6 @@ function FormManagerComponent({
             position={index + 1}
             defaultExpanded={formData.formId === lastAddedFormId}
             onUpdate={(updates) => updateForm(formData.formId, updates)}
-            onReset={() => resetForm(formData.formId)}
             onRemove={() => removeForm(formData.formId)}
             canRemove={canRemoveForm}
             validationErrors={getFormErrors(formData.formId)}

@@ -71,7 +71,7 @@ function ApplicationSelectorComponent({
         disabled={isDisabled}
         error={!!error}
       >
-        <InputLabel id="application-selector-label">
+        <InputLabel id="application-selector-label" shrink>
           Application *
         </InputLabel>
         <Select
@@ -84,6 +84,7 @@ function ApplicationSelectorComponent({
           disabled={isDisabled}
           // Requirement 2.2: Display placeholder when no application selected
           displayEmpty={false}
+          notched={true}
           data-testid="application-selector"
           inputProps={{
             'aria-label': 'Select application',
@@ -99,7 +100,7 @@ function ApplicationSelectorComponent({
         </Select>
         {error && (
           <div 
-            style={{ color: '#d32f2f', fontSize: '0.75rem', marginTop: '3px', marginLeft: '14px' }}
+            style={{ color: 'inherit', fontSize: '0.75rem', marginTop: '3px', marginLeft: '14px' }}
             id="application-selector-error"
             role="alert"
           >

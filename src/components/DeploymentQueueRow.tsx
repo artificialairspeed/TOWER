@@ -8,7 +8,8 @@
  * - Queue position number
  * - Application name (or "Not Selected")
  * - Environment
- * - Deployment date
+ * - Change Number
+ * - Release Version
  * - Expand/collapse control
  * - Remove control
  */
@@ -28,7 +29,6 @@ import {
 } from '@mui/icons-material';
 import type { DeploymentFormData, ValidationError } from '../types/models';
 import { DeploymentForm } from './DeploymentForm';
-import { format } from 'date-fns';
 
 export interface DeploymentQueueRowProps {
   /** The deployment form data */
@@ -37,8 +37,6 @@ export interface DeploymentQueueRowProps {
   position: number;
   /** Callback when form data is updated */
   onUpdate: (updates: Partial<DeploymentFormData>) => void;
-  /** Callback when form reset is confirmed */
-  onReset: () => void;
   /** Callback when form is removed */
   onRemove: () => void;
   /** Whether the remove button should be enabled */
@@ -73,7 +71,6 @@ function DeploymentQueueRowComponent({
   formData,
   position,
   onUpdate,
-  onReset,
   onRemove,
   canRemove,
   validationErrors = [],
@@ -108,16 +105,11 @@ function DeploymentQueueRowComponent({
     }
   }, [hasErrors]);
 
-  // Format date for display
-  const formattedDate = formData.startDateTime
-    ? format(formData.startDateTime, 'MMM dd, yyyy')
-    : 'Not set';
-
   // Get application name
-  const appName = formData.application?.name || 'Not Selected';
+  const appName = formData.application?.name || 'Not set';
 
   // Get environment
-  const environment = formData.environment || 'Not Set';
+  const environment = formData.environment || 'Not set';
 
   const toggleExpanded = () => setIsExpanded((prev) => !prev);
 
@@ -127,12 +119,9 @@ function DeploymentQueueRowComponent({
       elevation={isExpanded ? 3 : 1}
       sx={{
         overflow: 'hidden',
-        borderLeft: 4,
-        borderColor: hasErrors
-          ? 'error.main'
-          : isExpanded
-          ? 'primary.main'
-          : 'transparent',
+        border: '1px solid',
+        borderColor: hasErrors ? 'error.main' : 'divider',
+        borderRadius: 1,
         transition: 'all 0.2s ease-in-out',
       }}
       data-testid={`form-${position - 1}`}
@@ -159,7 +148,9 @@ function DeploymentQueueRowComponent({
           }
         }}
         aria-expanded={isExpanded}
-        aria-label={`Deployment ${position}: ${appName} to ${environment} on ${formattedDate}. ${
+        aria-label={`Deployment ${position}: ${appName} to ${environment}. Change: ${
+          formData.changeNumber || 'Not set'
+        }, Version: ${formData.releaseVersion || 'Not set'}. ${
           isExpanded ? 'Collapse' : 'Expand'
         } to ${isExpanded ? 'hide' : 'show'} details.`}
       >
@@ -201,7 +192,7 @@ function DeploymentQueueRowComponent({
             >
               Application
             </Typography>
-            <Typography variant="subtitle1" noWrap sx={{ fontWeight: 'medium' }}>
+            <Typography variant="body2" noWrap sx={{ fontWeight: 'medium' }}>
               {appName}
             </Typography>
             {hasErrors && (
@@ -235,10 +226,23 @@ function DeploymentQueueRowComponent({
               color="text.secondary"
               sx={{ display: 'block', lineHeight: 1.2 }}
             >
-              Deployment Date
+              Change Number
             </Typography>
             <Typography variant="body2" color="text.primary">
-              {formattedDate}
+              {formData.changeNumber || 'Not set'}
+            </Typography>
+          </Box>
+
+          <Box sx={{ flexShrink: 0 }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: 'block', lineHeight: 1.2 }}
+            >
+              Release Version
+            </Typography>
+            <Typography variant="body2" color="text.primary">
+              {formData.releaseVersion || 'Not set'}
             </Typography>
           </Box>
         </Box>
@@ -279,9 +283,6 @@ function DeploymentQueueRowComponent({
             formData={formData}
             formNumber={position}
             onUpdate={onUpdate}
-            onReset={onReset}
-            onRemove={onRemove}
-            canRemove={canRemove}
             validationErrors={validationErrors}
             onClearFieldError={onClearFieldError}
             onBlurValidate={onBlurValidate}

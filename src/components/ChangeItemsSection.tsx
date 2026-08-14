@@ -34,6 +34,39 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { ChangeItem } from '../types/models';
 
 /**
+ * ItemNumberBadge - Circular badge displaying an item number
+ * Uses green for Change Items to indicate approved changes ready to deploy
+ * Distinct from the blue deployment queue position badge
+ */
+interface ItemNumberBadgeProps {
+  number: number;
+  hasError?: boolean;
+}
+
+const ItemNumberBadge = memo<ItemNumberBadgeProps>(({ number, hasError = false }) => (
+  <Box
+    sx={{
+      flexShrink: 0,
+      minWidth: 44,
+      height: 44,
+      borderRadius: '50%',
+      bgcolor: hasError ? 'error.main' : 'success.main',
+      color: 'success.contrastText',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontWeight: 'bold',
+      fontSize: '1rem',
+    }}
+    aria-label={`Change item ${number}`}
+  >
+    {number}
+  </Box>
+));
+
+ItemNumberBadge.displayName = 'ItemNumberBadge';
+
+/**
  * Props for individual change item row
  */
 interface ChangeItemRowProps {
@@ -56,69 +89,66 @@ const ChangeItemRow = memo<ChangeItemRowProps>(({
   errors = {},
   onItemChange,
   onRemoveItem
-}) => (
+}) => {
+  const hasError = !!(errors.jiraNumber || errors.description);
+  
+  return (
   <Paper
     elevation={1}
     sx={{
       p: 2,
-      border: (errors.jiraNumber || errors.description) 
-        ? '1px solid' 
-        : 'none',
-      borderColor: 'error.main'
+      border: '1px solid',
+      borderColor: hasError ? 'error.main' : 'divider',
+      borderRadius: 1
     }}
     component="article"
-    aria-labelledby={`change-item-${index}-heading`}
+    aria-labelledby={`change-item-${index}-badge`}
   >
-    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      {/* Item Number Badge - Icon component instead of text header */}
+      <ItemNumberBadge number={index + 1} hasError={hasError} />
+      
       <Box sx={{ flex: 1 }}>
-        <Typography 
-          variant="subtitle2" 
-          sx={{ mb: 1, fontWeight: 'bold' }}
-          id={`change-item-${index}-heading`}
-        >
-          Change Item {index + 1}
-        </Typography>
-        
-        {/* Jira Number Input - Requirement: 6.2, 6.3 */}
-        <TextField
-          fullWidth
-          required
-          label="Jira Number"
-          value={item.jiraNumber}
-          onChange={(e) => onItemChange(item.id, 'jiraNumber', e.target.value)}
-          error={!!errors.jiraNumber}
-          helperText={errors.jiraNumber || 'Max 50 characters'}
-          slotProps={{
-            htmlInput: {
-              maxLength: 50,
-              'aria-label': `Jira number for change item ${index + 1}`,
-              'aria-describedby': errors.jiraNumber ? `change-item-${index}-jira-error` : `change-item-${index}-jira-help`,
-              'aria-invalid': !!errors.jiraNumber
-            }
-          }}
-          sx={{ mb: 2 }}
-        />
-        
-        {/* Description Textarea - Requirement: 6.2, 6.3 */}
-        <TextField
-          fullWidth
-          required
-          multiline
-          rows={3}
-          label="Description"
-          value={item.description}
-          onChange={(e) => onItemChange(item.id, 'description', e.target.value)}
-          error={!!errors.description}
-          helperText={errors.description || 'Max 500 characters'}
-          slotProps={{
-            htmlInput: {
-              maxLength: 500,
-              'aria-label': `Description for change item ${index + 1}`,
-              'aria-describedby': errors.description ? `change-item-${index}-desc-error` : `change-item-${index}-desc-help`,
-              'aria-invalid': !!errors.description
-            }
-          }}
-        />
+        {/* Jira Number and Description on same line - Requirement: 6.2, 6.3 */}
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          {/* Jira Number Input - 25% width */}
+          <TextField
+            required
+            label="Jira #"
+            value={item.jiraNumber}
+            onChange={(e) => onItemChange(item.id, 'jiraNumber', e.target.value)}
+            error={!!errors.jiraNumber}
+            slotProps={{
+              htmlInput: {
+                maxLength: 50,
+                'aria-label': `Jira number for change item ${index + 1}`,
+                'aria-describedby': errors.jiraNumber ? `change-item-${index}-jira-error` : `change-item-${index}-jira-help`,
+                'aria-invalid': !!errors.jiraNumber,
+                style: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+              }
+            }}
+            sx={{ flex: '0 0 25%' }}
+          />
+          
+          {/* Description Input - 75% width, same height as Jira # */}
+          <TextField
+            required
+            label="Description"
+            value={item.description}
+            onChange={(e) => onItemChange(item.id, 'description', e.target.value)}
+            error={!!errors.description}
+            slotProps={{
+              htmlInput: {
+                maxLength: 500,
+                'aria-label': `Description for change item ${index + 1}`,
+                'aria-describedby': errors.description ? `change-item-${index}-desc-error` : `change-item-${index}-desc-help`,
+                'aria-invalid': !!errors.description,
+                style: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+              }
+            }}
+            sx={{ flex: '0 0 75%' }}
+          />
+        </Box>
       </Box>
       
       {/* Remove Button - Requirements: 6.4, 6.5 */}
@@ -133,7 +163,8 @@ const ChangeItemRow = memo<ChangeItemRowProps>(({
       </IconButton>
     </Box>
   </Paper>
-));
+  );
+});
 
 ChangeItemRow.displayName = 'ChangeItemRow';
 
@@ -198,11 +229,13 @@ function ChangeItemsSectionComponent({
    * Update a specific change item field
    * Requirement: 6.2
    * Memoized with useCallback (22.2: Performance optimization)
+   * Note: jiraNumber is automatically converted to uppercase
    */
   const handleItemChange = useCallback((id: string, field: 'jiraNumber' | 'description', value: string) => {
+    const processedValue = field === 'jiraNumber' ? value.toUpperCase() : value;
     onChange(
       changeItems.map(item =>
-        item.id === id ? { ...item, [field]: value } : item
+        item.id === id ? { ...item, [field]: processedValue } : item
       )
     );
   }, [changeItems, onChange]);
@@ -217,10 +250,6 @@ function ChangeItemsSectionComponent({
     <Box sx={{ mb: 3 }} component="section" aria-labelledby="change-items-heading">
       <Typography variant="h6" gutterBottom id="change-items-heading">
         Change Items
-      </Typography>
-      
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        List the Jira change items included in this deployment (1-999 items required)
       </Typography>
       
       {/* Requirement 6.3: Show section-level validation error */}

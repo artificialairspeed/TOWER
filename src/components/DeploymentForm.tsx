@@ -4,43 +4,27 @@
  * Composes all form sections for a single deployment:
  * - ApplicationSelector
  * - DeploymentInfoSection
- * - DeploymentTitleDisplay
- * - ScheduleSection
- * - OutageSection
+ * - ScheduleSection (includes outage indicator Yes/No radio button on the right)
  * - ChangeItemsSection
  * - ImpactSection
  * - ContactSection
  * 
- * Includes form-level actions:
- * - Reset button (with confirmation)
- * - Remove button (disabled when single form)
- * 
  * Always expanded (no collapse functionality)
  * 
- * Requirements: 1.5, 1.6, 1.7, 1.8, 1.9, 1.10, 1.11
+ * Requirements: 1.5
  */
 
 import React from 'react';
 import {
   Box,
-  Typography,
-  Button,
   Stack,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  Divider
+  Divider,
+  Typography
 } from '@mui/material';
-import { Delete as DeleteIcon, RestartAlt as ResetIcon } from '@mui/icons-material';
 import type { DeploymentFormData, ValidationError } from '../types/models';
-import { useResetConfirmation } from '../hooks/useResetConfirmation';
 import { ApplicationSelector } from './ApplicationSelector';
 import { DeploymentInfoSection } from './DeploymentInfoSection';
-import { DeploymentTitleDisplay } from './DeploymentTitleDisplay';
 import { ScheduleSection } from './ScheduleSection';
-import { OutageSection } from './OutageSection';
 import { ChangeItemsSection } from './ChangeItemsSection';
 import { ImpactSection } from './ImpactSection';
 import { ContactSection } from './ContactSection';
@@ -53,12 +37,6 @@ export interface DeploymentFormProps {
   formNumber: number;
   /** Callback when form data is updated */
   onUpdate: (updates: Partial<DeploymentFormData>) => void;
-  /** Callback when form reset is confirmed */
-  onReset: () => void;
-  /** Callback when form is removed */
-  onRemove: () => void;
-  /** Whether the remove button should be enabled */
-  canRemove: boolean;
   /** Validation errors for this form */
   validationErrors?: ValidationError[];
   /** Callback to clear validation error for a specific field */
@@ -71,8 +49,6 @@ export interface DeploymentFormProps {
  * DeploymentForm component representing a single deployment form instance
  * 
  * Always displayed in expanded state with no collapse functionality (Requirement 1.5)
- * Includes Reset button with confirmation (Requirements 1.9, 1.10, 1.11)
- * Includes Remove button (disabled when single form) (Requirements 1.6, 1.8)
  * 
  * Displays validation errors:
  * - Summary alert at top of form listing all errors
@@ -84,21 +60,10 @@ function DeploymentFormComponent({
   formData,
   formNumber,
   onUpdate,
-  onReset,
-  onRemove,
-  canRemove,
   validationErrors = [],
   onClearFieldError,
   onBlurValidate
 }: DeploymentFormProps) {
-  // Reset confirmation hook - Requirements: 1.9, 1.10, 1.11
-  const {
-    isOpen: isResetDialogOpen,
-    initiateReset,
-    confirmReset,
-    cancelReset
-  } = useResetConfirmation(formData.formId, onReset);
-
   // Check if form has errors (for highlighting)
   const hasErrors = validationErrors.length > 0;
 
@@ -125,7 +90,7 @@ function DeploymentFormComponent({
       sx={{ 
         // Highlight form with errors using red border
         ...(hasErrors && {
-          border: 2,
+          border: 1,
           borderColor: 'error.main',
           borderRadius: 1,
           p: 2
@@ -136,43 +101,7 @@ function DeploymentFormComponent({
       aria-describedby={hasErrors ? `form-${formData.formId}-errors` : undefined}
     >
       {/* Form Header with Actions */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography 
-          variant="h6" 
-          component="h3" 
-          id={`form-${formData.formId}-heading`}
-          sx={hasErrors ? { color: 'error.main' } : undefined}
-        >
-          Deployment Form {formNumber}
-          {hasErrors && ' - Validation Errors'}
-        </Typography>
-
-        <Stack direction="row" spacing={1}>
-          {/* Reset Button - Requirements: 1.9, 1.10, 1.11 */}
-          <Button
-            variant="outlined"
-            startIcon={<ResetIcon />}
-            onClick={initiateReset}
-            size="small"
-            aria-label="Reset form to default values"
-          >
-            Reset
-          </Button>
-
-          {/* Remove Button - Requirements: 1.6, 1.7, 1.8 */}
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<DeleteIcon />}
-            onClick={onRemove}
-            disabled={!canRemove}
-            size="small"
-            aria-label={canRemove ? 'Remove this form' : 'Cannot remove the only form'}
-          >
-            Remove
-          </Button>
-        </Stack>
-      </Box>
+      {/* Reset and Remove buttons removed per user request */}
 
       <Divider sx={{ mb: 3 }} />
 
@@ -185,58 +114,90 @@ function DeploymentFormComponent({
 
       {/* Form Sections */}
       <Stack spacing={3}>
-        {/* Application Selection */}
-        <ApplicationSelector
-          value={formData.application}
-          onChange={(app) => handleFieldUpdate({ application: app }, 'application')}
-        />
+        {/* Deployment Information Header */}
+        <Box component="section" aria-labelledby="deployment-info-heading">
+          <Typography variant="h6" gutterBottom id="deployment-info-heading">
+            Deployment Information
+          </Typography>
 
-        {/* Deployment Information */}
-        <DeploymentInfoSection
-          changeNumber={formData.changeNumber}
-          releaseVersion={formData.releaseVersion}
-          environment={formData.environment}
-          onChangeNumberChange={(value) => handleFieldUpdate({ changeNumber: value }, 'changeNumber')}
-          onReleaseVersionChange={(value) => handleFieldUpdate({ releaseVersion: value }, 'releaseVersion')}
-          onEnvironmentChange={(value) => handleFieldUpdate({ environment: value }, 'environment')}
-          changeNumberError={getFieldError('changeNumber')}
-          releaseVersionError={getFieldError('releaseVersion')}
-          environmentError={getFieldError('environment')}
-          onBlurValidate={onBlurValidate}
-        />
-
-        {/* Deployment Title Display (read-only, computed) */}
-        <DeploymentTitleDisplay data={formData} />
+          {/* All 4 fields on same row */}
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: { xs: 'wrap', sm: 'nowrap' }, alignItems: 'flex-start' }}>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 25%' } }}>
+              <ApplicationSelector
+                value={formData.application}
+                onChange={(app) => handleFieldUpdate({ application: app }, 'application')}
+                error={getFieldError('application')}
+              />
+            </Box>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 25%' } }}>
+              <DeploymentInfoSection
+                changeNumber={formData.changeNumber}
+                releaseVersion={formData.releaseVersion}
+                environment={formData.environment}
+                onChangeNumberChange={(value) => handleFieldUpdate({ changeNumber: value }, 'changeNumber')}
+                onReleaseVersionChange={(value) => handleFieldUpdate({ releaseVersion: value }, 'releaseVersion')}
+                onEnvironmentChange={(value) => handleFieldUpdate({ environment: value }, 'environment')}
+                changeNumberError={getFieldError('changeNumber')}
+                releaseVersionError={getFieldError('releaseVersion')}
+                environmentError={getFieldError('environment')}
+                onBlurValidate={onBlurValidate}
+                environmentOnly={true}
+              />
+            </Box>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 25%' } }}>
+              <DeploymentInfoSection
+                changeNumber={formData.changeNumber}
+                releaseVersion={formData.releaseVersion}
+                environment={formData.environment}
+                onChangeNumberChange={(value) => handleFieldUpdate({ changeNumber: value }, 'changeNumber')}
+                onReleaseVersionChange={(value) => handleFieldUpdate({ releaseVersion: value }, 'releaseVersion')}
+                onEnvironmentChange={(value) => handleFieldUpdate({ environment: value }, 'environment')}
+                changeNumberError={getFieldError('changeNumber')}
+                releaseVersionError={getFieldError('releaseVersion')}
+                environmentError={getFieldError('environment')}
+                onBlurValidate={onBlurValidate}
+                changeNumberOnly={true}
+              />
+            </Box>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 25%' } }}>
+              <DeploymentInfoSection
+                changeNumber={formData.changeNumber}
+                releaseVersion={formData.releaseVersion}
+                environment={formData.environment}
+                onChangeNumberChange={(value) => handleFieldUpdate({ changeNumber: value }, 'changeNumber')}
+                onReleaseVersionChange={(value) => handleFieldUpdate({ releaseVersion: value }, 'releaseVersion')}
+                onEnvironmentChange={(value) => handleFieldUpdate({ environment: value }, 'environment')}
+                changeNumberError={getFieldError('changeNumber')}
+                releaseVersionError={getFieldError('releaseVersion')}
+                environmentError={getFieldError('environment')}
+                onBlurValidate={onBlurValidate}
+                releaseVersionOnly={true}
+              />
+            </Box>
+          </Box>
+        </Box>
 
         {/* Schedule Section */}
         <ScheduleSection
           startDateTime={formData.startDateTime}
           endDateTime={formData.endDateTime}
-          onStartDateTimeChange={(value) => handleFieldUpdate({ startDateTime: value ?? new Date() }, 'startDateTime')}
+          onStartDateTimeChange={(value) => {
+            const newStartDate = value ?? new Date();
+            // When start date changes, sync only the date part of end date while preserving end time
+            const syncedEndDate = new Date(formData.endDateTime);
+            syncedEndDate.setFullYear(newStartDate.getFullYear());
+            syncedEndDate.setMonth(newStartDate.getMonth());
+            syncedEndDate.setDate(newStartDate.getDate());
+            handleFieldUpdate({ 
+              startDateTime: newStartDate,
+              endDateTime: syncedEndDate
+            }, 'startDateTime');
+          }}
           onEndDateTimeChange={(value) => handleFieldUpdate({ endDateTime: value ?? new Date() }, 'endDateTime')}
           startDateTimeError={getFieldError('startDateTime')}
           endDateTimeError={getFieldError('endDateTime')}
-        />
-
-        {/* Outage Section */}
-        <OutageSection
           hasOutage={formData.hasOutage}
-          outageStartDateTime={formData.outageStartDateTime}
-          outageEndDateTime={formData.outageEndDateTime}
-          onHasOutageChange={(value) => {
-            if (value) {
-              // Default outage start/end from the deployment schedule
-              handleFieldUpdate({
-                hasOutage: value,
-                outageStartDateTime: formData.startDateTime,
-                outageEndDateTime: formData.endDateTime,
-              }, 'hasOutage');
-            } else {
-              handleFieldUpdate({ hasOutage: value }, 'hasOutage');
-            }
-          }}
-          onOutageStartDateTimeChange={(value) => handleFieldUpdate({ outageStartDateTime: value }, 'outageStartDateTime')}
-          onOutageEndDateTimeChange={(value) => handleFieldUpdate({ outageEndDateTime: value }, 'outageEndDateTime')}
+          onHasOutageChange={(value) => handleFieldUpdate({ hasOutage: value }, 'hasOutage')}
         />
 
         {/* Change Items Section */}
@@ -265,34 +226,6 @@ function DeploymentFormComponent({
           onBlurValidate={onBlurValidate}
         />
       </Stack>
-
-      {/* Reset Confirmation Dialog - Requirements: 1.9, 1.10, 1.11 */}
-      <Dialog
-        open={isResetDialogOpen}
-        onClose={cancelReset}
-        aria-labelledby="reset-dialog-title"
-        aria-describedby="reset-dialog-description"
-      >
-        <DialogTitle id="reset-dialog-title">
-          Reset Deployment Form {formNumber}?
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="reset-dialog-description">
-            This will clear all entered values and restore the form to its default state.
-            This action cannot be undone. Are you sure you want to continue?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          {/* Cancel button - Requirement 1.11: preserve all values */}
-          <Button onClick={cancelReset} color="primary">
-            Cancel
-          </Button>
-          {/* Confirm button - Requirement 1.10: clear all values and restore defaults */}
-          <Button onClick={confirmReset} color="error" variant="contained">
-            Reset Form
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }

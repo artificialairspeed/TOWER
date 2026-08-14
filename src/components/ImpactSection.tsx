@@ -3,7 +3,7 @@
  * 
  * Provides UI for managing deployment impact items:
  * - Display list of Impact_Item entries with Add/Remove controls
- * - Each item: textarea for impact text (max 500 chars)
+ * - Each item: single-line text field for impact text (max 500 chars)
  * - Add button creates new item (max 100 total)
  * - Remove button deletes item (min 1 required)
  * - Disable Add at 100 items, show message "Maximum 100 impact items reached"
@@ -20,9 +20,42 @@
  */
 
 import { useCallback, memo } from 'react';
-import { Box, Typography, TextField, Button, IconButton, Alert } from '@mui/material';
+import { Box, Typography, TextField, Button, IconButton, Alert, Paper } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import type { ImpactItem } from '../types/models';
+
+/**
+ * ItemNumberBadge - Circular badge displaying an item number
+ * Uses amber to indicate impact/consequences of the deployment
+ * Matches the design of the deployment queue position badge
+ */
+interface ItemNumberBadgeProps {
+  number: number;
+  hasError?: boolean;
+}
+
+const ItemNumberBadge = memo<ItemNumberBadgeProps>(({ number, hasError = false }) => (
+  <Box
+    sx={{
+      flexShrink: 0,
+      minWidth: 44,
+      height: 44,
+      borderRadius: '50%',
+      bgcolor: hasError ? 'error.main' : 'warning.main',
+      color: 'warning.contrastText',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontWeight: 'bold',
+      fontSize: '1rem',
+    }}
+    aria-label={`Impact item ${number}`}
+  >
+    {number}
+  </Box>
+));
+
+ItemNumberBadge.displayName = 'ItemNumberBadge';
 
 /**
  * Props for individual impact item row
@@ -48,53 +81,56 @@ const ImpactItemRow = memo<ImpactItemRowProps>(({
   onTextChange,
   onRemoveItem
 }) => {
-  const charCount = item.text.length;
-  const isOverLimit = charCount > 500;
-  const charCountText = isOverLimit
-    ? `${charCount}/500 characters - exceeds maximum length`
-    : `${charCount}/500 characters`;
+  const hasError = !!error;
 
   return (
-    <Box
+    <Paper
+      elevation={1}
       sx={{
-        display: 'flex',
-        gap: 1,
-        mb: 2,
-        alignItems: 'flex-start'
+        p: 2,
+        border: '1px solid',
+        borderColor: hasError ? 'error.main' : 'divider',
+        borderRadius: 1,
+        mb: 2
       }}
+      component="article"
+      aria-labelledby={`impact-item-${index}-badge`}
     >
-      {/* Impact text textarea - Requirements: 7.3, 7.4 */}
-      <TextField
-        label={`Impact Item ${index + 1}`}
-        value={item.text}
-        onChange={(e) => onTextChange(item.id, e.target.value)}
-        multiline
-        rows={3}
-        fullWidth
-        required
-        error={!!error}
-        helperText={error || charCountText}
-        slotProps={{
-          htmlInput: {
-            'aria-label': `Impact item ${index + 1} description`,
-            'aria-describedby': error ? `impact-item-${index}-error` : `impact-item-${index}-help`,
-            'aria-invalid': !!error
-          }
-        }}
-      />
-      
-      {/* Remove button - Requirements: 7.5, 7.6 */}
-      <IconButton
-        onClick={() => onRemoveItem(item.id)}
-        disabled={isAtMinCapacity}
-        color="error"
-        aria-label={`Remove impact item ${index + 1}`}
-        title={isAtMinCapacity ? 'At least one impact item is required' : undefined}
-        sx={{ mt: 1 }}
-      >
-        <DeleteIcon />
-      </IconButton>
-    </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        {/* Item Number Badge - Icon component */}
+        <ItemNumberBadge number={index + 1} hasError={hasError} />
+        
+        {/* Impact text field - single line, no wrapping - Requirements: 7.3, 7.4 */}
+        <TextField
+          placeholder="Impacts *"
+          value={item.text}
+          onChange={(e) => onTextChange(item.id, e.target.value)}
+          fullWidth
+          required
+          error={hasError}
+          slotProps={{
+            htmlInput: {
+              maxLength: 500,
+              'aria-label': `Impact item ${index + 1} description`,
+              'aria-describedby': error ? `impact-item-${index}-error` : `impact-item-${index}-help`,
+              'aria-invalid': hasError,
+              style: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+            }
+          }}
+        />
+        
+        {/* Remove button - Requirements: 7.5, 7.6 */}
+        <IconButton
+          onClick={() => onRemoveItem(item.id)}
+          disabled={isAtMinCapacity}
+          color="error"
+          aria-label={`Remove impact item ${index + 1}`}
+          title={isAtMinCapacity ? 'At least one impact item is required' : undefined}
+        >
+          <DeleteIcon />
+        </IconButton>
+      </Box>
+    </Paper>
   );
 });
 
@@ -176,11 +212,7 @@ function ImpactSectionComponent({
   return (
     <Box sx={{ mb: 3 }} component="section" aria-labelledby="impact-items-heading">
       <Typography variant="h6" gutterBottom id="impact-items-heading">
-        Impact Items *
-      </Typography>
-      
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        List the deployment impacts (1-100 items, max 500 characters per item)
+        Impact Items
       </Typography>
 
       {/* Show maximum capacity message when at 100 items - Requirement 7.2 */}
@@ -219,9 +251,10 @@ function ImpactSectionComponent({
         startIcon={<AddIcon />}
         onClick={handleAddItem}
         disabled={isAtMaxCapacity}
-        sx={{ mt: 1 }}
+        sx={{ mt: 2 }}
+        fullWidth
       >
-        Add Impact Item
+        {isAtMaxCapacity ? 'Maximum 100 items reached' : 'Add Impact Item'}
       </Button>
       
       {/* General validation error for impact items list */}

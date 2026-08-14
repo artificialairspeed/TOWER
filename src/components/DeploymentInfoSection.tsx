@@ -18,7 +18,8 @@ import {
   MenuItem,
   FormHelperText,
   Box,
-  Typography
+  Typography,
+  InputAdornment
 } from '@mui/material';
 import { Environment } from '../types/models';
 
@@ -43,6 +44,12 @@ export interface DeploymentInfoSectionProps {
   environmentError?: string;
   /** Callback for onBlur field validation (field, value) */
   onBlurValidate?: (field: string, value: string) => void;
+  /** If true, only render the environment field (for same-row layout) */
+  environmentOnly?: boolean;
+  /** If true, only render the change number field (for same-row layout) */
+  changeNumberOnly?: boolean;
+  /** If true, only render the release version field (for same-row layout) */
+  releaseVersionOnly?: boolean;
 }
 
 /**
@@ -61,7 +68,10 @@ function DeploymentInfoSectionComponent({
   changeNumberError,
   releaseVersionError,
   environmentError,
-  onBlurValidate
+  onBlurValidate,
+  environmentOnly = false,
+  changeNumberOnly = false,
+  releaseVersionOnly = false
 }: DeploymentInfoSectionProps) {
   /**
    * Handle change number blur event - auto-trim leading/trailing whitespace
@@ -100,90 +110,107 @@ function DeploymentInfoSectionComponent({
   };
 
   return (
-    <Box sx={{ mb: 3 }} component="section" aria-labelledby="deployment-info-heading">
-      <Typography variant="h6" gutterBottom id="deployment-info-heading">
-        Deployment Information
-      </Typography>
+    <Box sx={{ mb: environmentOnly || changeNumberOnly || releaseVersionOnly ? 0 : 3 }} component={environmentOnly || changeNumberOnly || releaseVersionOnly ? 'div' : 'section'} aria-labelledby={environmentOnly || changeNumberOnly || releaseVersionOnly ? undefined : "deployment-info-heading"}>
+      {!environmentOnly && !changeNumberOnly && !releaseVersionOnly && (
+        <Typography variant="h6" gutterBottom id="deployment-info-heading">
+          Deployment Information
+        </Typography>
+      )}
       
       {/* Change Number Input - Requirements: 3.1, 3.4 */}
-      <TextField
-        fullWidth
-        required
-        label="Change Number"
-        value={changeNumber}
-        onChange={(e) => onChangeNumberChange(e.target.value)}
-        onBlur={handleChangeNumberBlur}
-        error={!!changeNumberError}
-        helperText={changeNumberError || 'Max 20 characters'}
-        slotProps={{
-          htmlInput: {
-            maxLength: 20,
-            'aria-label': 'Change number',
-            'aria-describedby': changeNumberError ? 'change-number-error' : 'change-number-help',
-            'aria-invalid': !!changeNumberError
-          }
-        }}
-        sx={{ mb: 2 }}
-      />
+      {(changeNumberOnly || (!environmentOnly && !changeNumberOnly && !releaseVersionOnly)) && (
+        <TextField
+          fullWidth
+          required
+          label="Change Number"
+          value={changeNumber}
+          onChange={(e) => onChangeNumberChange(e.target.value)}
+          onBlur={handleChangeNumberBlur}
+          error={!!changeNumberError}
+          slotProps={{
+            htmlInput: {
+              maxLength: 20,
+              'aria-label': 'Change number',
+              'aria-describedby': changeNumberError ? 'change-number-error' : 'change-number-help',
+              'aria-invalid': !!changeNumberError
+            },
+            input: {
+              startAdornment: <InputAdornment position="start">CHG</InputAdornment>
+            },
+            inputLabel: {
+              shrink: true
+            }
+          }}
+          sx={{ mb: changeNumberOnly ? 0 : 2 }}
+        />
+      )}
 
       {/* Release Version Input - Requirements: 3.2, 3.4 */}
-      <TextField
-        fullWidth
-        required
-        label="Release Version"
-        value={releaseVersion}
-        onChange={(e) => onReleaseVersionChange(e.target.value)}
-        onBlur={handleReleaseVersionBlur}
-        error={!!releaseVersionError}
-        helperText={releaseVersionError || 'Max 50 characters'}
-        slotProps={{
-          htmlInput: {
-            maxLength: 50,
-            'aria-label': 'Release version',
-            'aria-describedby': releaseVersionError ? 'release-version-error' : 'release-version-help',
-            'aria-invalid': !!releaseVersionError
-          }
-        }}
-        sx={{ mb: 2 }}
-      />
-
-      {/* Environment Dropdown - Requirements: 3.3 */}
-      <FormControl 
-        fullWidth 
-        required 
-        error={!!environmentError}
-        sx={{ mb: 2 }}
-      >
-        <InputLabel id="environment-label">Environment</InputLabel>
-        <Select
-          labelId="environment-label"
-          id="environment-select"
-          value={environment || ''}
-          label="Environment"
-          onChange={(e) => handleEnvironmentChange(e.target.value)}
-          inputProps={{
-            'aria-label': 'Deployment environment',
-            'aria-describedby': environmentError ? 'environment-error' : 'environment-help',
-            'aria-invalid': !!environmentError
+      {(releaseVersionOnly || (!environmentOnly && !changeNumberOnly && !releaseVersionOnly)) && (
+        <TextField
+          fullWidth
+          required
+          label="Release Version"
+          placeholder="YYYY.#.#"
+          value={releaseVersion}
+          onChange={(e) => onReleaseVersionChange(e.target.value)}
+          onBlur={handleReleaseVersionBlur}
+          error={!!releaseVersionError}
+          slotProps={{
+            htmlInput: {
+              maxLength: 50,
+              'aria-label': 'Release version',
+              'aria-describedby': releaseVersionError ? 'release-version-error' : 'release-version-help',
+              'aria-invalid': !!releaseVersionError
+            },
+            input: {
+              startAdornment: <InputAdornment position="start">PI</InputAdornment>
+            },
+            inputLabel: {
+              shrink: true
+            }
           }}
+          sx={{ mb: releaseVersionOnly ? 0 : 2 }}
+        />
+      )}
+
+      {/* Environment Dropdown - Requirements: 3.3 (only shown when environmentOnly is true) */}
+      {environmentOnly && (
+        <FormControl 
+          fullWidth 
+          required 
+          error={!!environmentError}
+          sx={{ mb: 0 }}
         >
-          <MenuItem value="">
-            <em>Select Environment</em>
-          </MenuItem>
-          <MenuItem value="PROD">PROD</MenuItem>
-          <MenuItem value="QA">QA</MenuItem>
-          <MenuItem value="ITEST">ITEST</MenuItem>
-          <MenuItem value="DEV">DEV</MenuItem>
-        </Select>
-        {environmentError && (
-          <FormHelperText id="environment-error">{environmentError}</FormHelperText>
-        )}
-        {!environmentError && (
-          <span id="environment-help" className="sr-only">
-            Select the target environment for this deployment
-          </span>
-        )}
-      </FormControl>
+          <InputLabel id="environment-label" shrink>Environment *</InputLabel>
+          <Select
+            labelId="environment-label"
+            id="environment-select"
+            value={environment || ''}
+            label="Environment *"
+            onChange={(e) => handleEnvironmentChange(e.target.value)}
+            notched={true}
+            inputProps={{
+              'aria-label': 'Deployment environment',
+              'aria-describedby': environmentError ? 'environment-error' : 'environment-help',
+              'aria-invalid': !!environmentError
+            }}
+          >
+            <MenuItem value="PROD">PROD</MenuItem>
+            <MenuItem value="QA">QA</MenuItem>
+            <MenuItem value="ITEST">ITEST</MenuItem>
+            <MenuItem value="DEV">DEV</MenuItem>
+          </Select>
+          {environmentError && (
+            <FormHelperText id="environment-error">{environmentError}</FormHelperText>
+          )}
+          {!environmentError && (
+            <span id="environment-help" className="sr-only">
+              Select the target environment for this deployment
+            </span>
+          )}
+        </FormControl>
+      )}
     </Box>
   );
 }

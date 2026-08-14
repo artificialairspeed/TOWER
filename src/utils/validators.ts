@@ -104,6 +104,9 @@ export function validateFieldOnBlur(
       if (!isWithinLength(value, 255)) {
         return 'Phone must not exceed 255 characters';
       }
+      if (value && !isValidPhone(value)) {
+        return 'Phone must be exactly 10 digits in format (###) ###-####';
+      }
       return undefined;
 
     case 'contactName':
@@ -228,37 +231,6 @@ export function validateForm(data: DeploymentFormData): ValidationResult {
         field: 'endDateTime',
         message: 'Deployment End must be later than Deployment Start'
       });
-    }
-  }
-
-  // ===== Outage Information (Requirement 5.6) =====
-  if (data.hasOutage) {
-    // Outage date/time fields are required when outage indicator is Yes
-    if (!data.outageStartDateTime) {
-      errors.push({
-        formId: data.formId,
-        field: 'outageStartDateTime',
-        message: 'Outage Start is required when outage is indicated'
-      });
-    }
-
-    if (!data.outageEndDateTime) {
-      errors.push({
-        formId: data.formId,
-        field: 'outageEndDateTime',
-        message: 'Outage End is required when outage is indicated'
-      });
-    }
-
-    // Validate outage time ordering: Outage End must be later than Outage Start
-    if (data.outageStartDateTime && data.outageEndDateTime) {
-      if (data.outageEndDateTime <= data.outageStartDateTime) {
-        errors.push({
-          formId: data.formId,
-          field: 'outageEndDateTime',
-          message: 'Outage End must be later than Outage Start'
-        });
-      }
     }
   }
 
@@ -387,9 +359,13 @@ export function validateForm(data: DeploymentFormData): ValidationResult {
       field: 'contactPhone',
       message: 'Phone must not exceed 255 characters'
     });
+  } else if (!isValidPhone(data.contactPhone)) {
+    errors.push({
+      formId: data.formId,
+      field: 'contactPhone',
+      message: 'Phone must be exactly 10 digits in format (###) ###-####'
+    });
   }
-  // Note: no specific phone format is required. Any format the user enters is
-  // accepted and normalized to (###) ###-#### via formatPhoneNumber on input.
 
   // Return validation result
   return {

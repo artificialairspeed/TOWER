@@ -22,6 +22,8 @@ export function ScheduleSectionExample() {
     return date;
   });
 
+  const [hasOutage, setHasOutage] = useState(false);
+
   // Validation logic (Requirement 4.6)
   const getEndDateTimeError = (): string | undefined => {
     if (!startDateTime || !endDateTime) {
@@ -47,6 +49,8 @@ export function ScheduleSectionExample() {
         onStartDateTimeChange={(value) => value && setStartDateTime(value)}
         onEndDateTimeChange={(value) => value && setEndDateTime(value)}
         endDateTimeError={endDateTimeError}
+        hasOutage={hasOutage}
+        onHasOutageChange={setHasOutage}
       />
       
       {/* Display current values */}
@@ -54,6 +58,7 @@ export function ScheduleSectionExample() {
         <h3>Current Values:</h3>
         <p><strong>Start:</strong> {startDateTime.toLocaleString()}</p>
         <p><strong>End:</strong> {endDateTime.toLocaleString()}</p>
+        <p><strong>Has Outage:</strong> {hasOutage ? 'Yes' : 'No'}</p>
         <p><strong>Validation Status:</strong> {endDateTimeError ? `❌ ${endDateTimeError}` : '✓ Valid'}</p>
       </div>
     </div>
@@ -66,6 +71,7 @@ export function ScheduleSectionExample() {
 export function ScheduleSectionWithErrorsExample() {
   const [startDateTime, setStartDateTime] = useState<Date>(new Date());
   const [endDateTime, setEndDateTime] = useState<Date>(new Date());
+  const [hasOutage, setHasOutage] = useState(false);
 
   return (
     <div>
@@ -78,6 +84,8 @@ export function ScheduleSectionWithErrorsExample() {
         onEndDateTimeChange={(value) => value && setEndDateTime(value)}
         startDateTimeError="Deployment Start is required"
         endDateTimeError="Deployment End must be later than Deployment Start"
+        hasOutage={hasOutage}
+        onHasOutageChange={setHasOutage}
       />
     </div>
   );
