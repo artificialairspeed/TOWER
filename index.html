@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TOWER — Takeoff Notifications for Technology Deployments</title>
+    <style>
+      /* Ensure full height and no margin for proper background coverage */
+      html, body, #root {
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+      }
+
+      /* Smooth scrolling when focus/expansion moves the viewport */
+      html {
+        scroll-behavior: smooth;
+      }
+
+      /*
+       * Screen-reader-only utility.
+       * Visually hides content while keeping it available to assistive tech.
+       * Previously this class was referenced across the app but never defined,
+       * so only duplicated inline styles were doing the work. This is the single
+       * source of truth now.
+       */
+      .sr-only {
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        padding: 0 !important;
+        margin: -1px !important;
+        overflow: hidden !important;
+        clip: rect(0, 0, 0, 0) !important;
+        white-space: nowrap !important;
+        border: 0 !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
