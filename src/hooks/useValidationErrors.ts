@@ -25,6 +25,8 @@ interface ValidationErrorMap {
 export interface UseValidationErrorsReturn {
   /** Set all validation errors from a batch validation result */
   setErrors: (errors: ValidationError[]) => void;
+  /** Set a single field error (for onBlur validation) */
+  setFieldError: (formId: string, field: string, message: string) => void;
   /** Clear all validation errors */
   clearAllErrors: () => void;
   /** Clear errors for a specific form */
@@ -83,6 +85,19 @@ export function useValidationErrors(): UseValidationErrorsReturn {
     });
     
     setErrorMap(newErrorMap);
+  }, []);
+
+  /**
+   * Set a single field error (used for onBlur validation)
+   */
+  const setFieldError = useCallback((formId: string, field: string, message: string) => {
+    setErrorMap(prev => ({
+      ...prev,
+      [formId]: {
+        ...prev[formId],
+        [field]: message
+      }
+    }));
   }, []);
 
   /**
@@ -178,6 +193,7 @@ export function useValidationErrors(): UseValidationErrorsReturn {
 
   return {
     setErrors,
+    setFieldError,
     clearAllErrors,
     clearFormErrors,
     clearFieldError,

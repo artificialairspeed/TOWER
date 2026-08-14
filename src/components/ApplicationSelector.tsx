@@ -10,6 +10,7 @@
  * - 2.8: Disable dropdown when catalog empty
  */
 
+import React from 'react';
 import { FormControl, InputLabel, Select, MenuItem, Alert, SelectChangeEvent } from '@mui/material';
 import { Application, APPLICATION_CATALOG } from '../types/models';
 
@@ -31,8 +32,11 @@ export interface ApplicationSelectorProps {
  * 
  * Displays a dropdown for selecting an application from the catalog.
  * Shows appropriate messaging when catalog is empty.
+ * 
+ * Performance optimization:
+ * - Wrapped with React.memo to prevent re-renders when parent changes (22.2)
  */
-export function ApplicationSelector({
+function ApplicationSelectorComponent({
   value,
   onChange,
   disabled = false,
@@ -80,6 +84,7 @@ export function ApplicationSelector({
           disabled={isDisabled}
           // Requirement 2.2: Display placeholder when no application selected
           displayEmpty={false}
+          data-testid="application-selector"
           inputProps={{
             'aria-label': 'Select application',
             'aria-describedby': error ? 'application-selector-error' : 'application-selector-help'
@@ -110,3 +115,6 @@ export function ApplicationSelector({
     </div>
   );
 }
+
+// Wrap component with React.memo to prevent re-renders (22.2: Performance optimization)
+export const ApplicationSelector = React.memo(ApplicationSelectorComponent);

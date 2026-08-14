@@ -41,12 +41,17 @@ export interface DeploymentInfoSectionProps {
   releaseVersionError?: string;
   /** Validation error for environment field */
   environmentError?: string;
+  /** Callback for onBlur field validation (field, value) */
+  onBlurValidate?: (field: string, value: string) => void;
 }
 
 /**
  * DeploymentInfoSection component for entering core deployment identifiers
+ * 
+ * Performance optimization:
+ * - Wrapped with React.memo to prevent re-renders when parent changes (22.2)
  */
-export const DeploymentInfoSection: React.FC<DeploymentInfoSectionProps> = ({
+function DeploymentInfoSectionComponent({
   changeNumber,
   releaseVersion,
   environment,
@@ -55,8 +60,9 @@ export const DeploymentInfoSection: React.FC<DeploymentInfoSectionProps> = ({
   onEnvironmentChange,
   changeNumberError,
   releaseVersionError,
-  environmentError
-}) => {
+  environmentError,
+  onBlurValidate
+}: DeploymentInfoSectionProps) {
   /**
    * Handle change number blur event - auto-trim leading/trailing whitespace
    * Requirements: 3.4
@@ -66,6 +72,7 @@ export const DeploymentInfoSection: React.FC<DeploymentInfoSectionProps> = ({
     if (trimmed !== changeNumber) {
       onChangeNumberChange(trimmed);
     }
+    onBlurValidate?.('changeNumber', trimmed);
   };
 
   /**
@@ -77,6 +84,7 @@ export const DeploymentInfoSection: React.FC<DeploymentInfoSectionProps> = ({
     if (trimmed !== releaseVersion) {
       onReleaseVersionChange(trimmed);
     }
+    onBlurValidate?.('releaseVersion', trimmed);
   };
 
   /**
@@ -106,7 +114,7 @@ export const DeploymentInfoSection: React.FC<DeploymentInfoSectionProps> = ({
         onChange={(e) => onChangeNumberChange(e.target.value)}
         onBlur={handleChangeNumberBlur}
         error={!!changeNumberError}
-        helperText={changeNumberError}
+        helperText={changeNumberError || 'Max 20 characters'}
         slotProps={{
           htmlInput: {
             maxLength: 20,
@@ -127,7 +135,7 @@ export const DeploymentInfoSection: React.FC<DeploymentInfoSectionProps> = ({
         onChange={(e) => onReleaseVersionChange(e.target.value)}
         onBlur={handleReleaseVersionBlur}
         error={!!releaseVersionError}
-        helperText={releaseVersionError}
+        helperText={releaseVersionError || 'Max 50 characters'}
         slotProps={{
           htmlInput: {
             maxLength: 50,
@@ -178,4 +186,7 @@ export const DeploymentInfoSection: React.FC<DeploymentInfoSectionProps> = ({
       </FormControl>
     </Box>
   );
-};
+}
+
+// Wrap component with React.memo to prevent re-renders (22.2: Performance optimization)
+export const DeploymentInfoSection = React.memo(DeploymentInfoSectionComponent);

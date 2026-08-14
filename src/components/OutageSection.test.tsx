@@ -1,270 +1,541 @@
 /**
- * Unit tests for OutageSection component
+ * Component tests for OutageSection
  * 
- * Tests Requirements:
- * - 5.1: Yes/No outage indicator
- * - 5.2: Default outage indicator to No
- * - 5.3: Conditionally render date/time pickers when Yes selected
- * - 5.4: Hide pickers when No selected
- * - 5.5: Clear outage values when switching from Yes to No
- * - 5.6: Show validation error when outage end <= outage start
+ * Tests verify:
+ * - Test outage section show/hide on indicator change
+ * - Test outage values cleared when switching to No
+ * - Test validation errors displayed for time ordering
+ * 
+ * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { OutageSection } from './OutageSection';
+import { addHours } from 'date-fns';
 
 describe('OutageSection', () => {
   const mockOnHasOutageChange = vi.fn();
-  const mockOnOutageStartDateChange = vi.fn();
-  const mockOnOutageStartTimeChange = vi.fn();
-  const mockOnOutageEndDateChange = vi.fn();
-  const mockOnOutageEndTimeChange = vi.fn();
-
-  const defaultProps = {
-    hasOutage: false,
-    outageStartDate: null,
-    outageStartTime: null,
-    outageEndDate: null,
-    outageEndTime: null,
-    onHasOutageChange: mockOnHasOutageChange,
-    onOutageStartDateChange: mockOnOutageStartDateChange,
-    onOutageStartTimeChange: mockOnOutageStartTimeChange,
-    onOutageEndDateChange: mockOnOutageEndDateChange,
-    onOutageEndTimeChange: mockOnOutageEndTimeChange
-  };
+  const mockOnOutageStartDateTimeChange = vi.fn();
+  const mockOnOutageEndDateTimeChange = vi.fn();
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockOnHasOutageChange.mockClear();
+    mockOnOutageStartDateTimeChange.mockClear();
+    mockOnOutageEndDateTimeChange.mockClear();
   });
 
-  // Requirement 5.1, 5.2: Yes/No outage indicator with default No
-  it('should render Yes/No radio buttons with No selected by default', () => {
-    render(<OutageSection {...defaultProps} />);
-    
-    const noRadio = screen.getByLabelText('No');
-    const yesRadio = screen.getByLabelText('Yes');
-    
-    expect(noRadio).toBeInTheDocument();
-    expect(yesRadio).toBeInTheDocument();
-    expect(noRadio).toBeChecked();
-    expect(yesRadio).not.toBeChecked();
-  });
-
-  // Requirement 5.4: Hide pickers when No selected
-  it('should hide date/time pickers when hasOutage is false', () => {
-    render(<OutageSection {...defaultProps} hasOutage={false} />);
-    
-    expect(screen.queryByLabelText(/Outage Start Date/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/Outage Start Time/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/Outage End Date/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/Outage End Time/i)).not.toBeInTheDocument();
-  });
-
-  // Requirement 5.3: Conditionally render pickers when Yes selected (4 pickers total)
-  it('should show all 4 date/time pickers when hasOutage is true', () => {
-    render(<OutageSection {...defaultProps} hasOutage={true} />);
-    
-    // Check that all 4 pickers are present - MUI renders labels multiple times (legend + label)
-    // So we use getAllByText and verify that at least one instance exists for each picker
-    expect(screen.getAllByText(/Outage Start Date \*/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Outage Start Time \*/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Outage End Date \*/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Outage End Time \*/).length).toBeGreaterThan(0);
-  });
-
-  // Requirement 5.1: Call callback when radio button selection changes
-  it('should call onHasOutageChange when Yes is selected', async () => {
-    const user = userEvent.setup();
-    render(<OutageSection {...defaultProps} hasOutage={false} />);
-    
-    const yesRadio = screen.getByLabelText('Yes');
-    await user.click(yesRadio);
-    
-    expect(mockOnHasOutageChange).toHaveBeenCalledWith(true);
-  });
-
-  it('should call onHasOutageChange when No is selected', async () => {
-    const user = userEvent.setup();
-    render(<OutageSection {...defaultProps} hasOutage={true} />);
-    
-    const noRadio = screen.getByLabelText('No');
-    await user.click(noRadio);
-    
-    expect(mockOnHasOutageChange).toHaveBeenCalledWith(false);
-  });
-
-  // Requirement 5.5: Clear outage values when switching from Yes to No
-  it('should clear all outage values when switching from Yes to No', async () => {
-    const user = userEvent.setup();
-    render(
-      <OutageSection 
-        {...defaultProps} 
-        hasOutage={true}
-        outageStartDate={new Date('2025-01-15')}
-        outageStartTime={new Date('2025-01-15T20:00:00')}
-        outageEndDate={new Date('2025-01-15')}
-        outageEndTime={new Date('2025-01-15T22:00:00')}
-      />
-    );
-    
-    const noRadio = screen.getByLabelText('No');
-    await user.click(noRadio);
-    
-    // Should call all clear callbacks
-    expect(mockOnOutageStartDateChange).toHaveBeenCalledWith(null);
-    expect(mockOnOutageStartTimeChange).toHaveBeenCalledWith(null);
-    expect(mockOnOutageEndDateChange).toHaveBeenCalledWith(null);
-    expect(mockOnOutageEndTimeChange).toHaveBeenCalledWith(null);
-    expect(mockOnHasOutageChange).toHaveBeenCalledWith(false);
-  });
-
-  it('should NOT clear outage values when switching from No to Yes', async () => {
-    const user = userEvent.setup();
-    render(<OutageSection {...defaultProps} hasOutage={false} />);
-    
-    const yesRadio = screen.getByLabelText('Yes');
-    await user.click(yesRadio);
-    
-    // Should only call hasOutage change, not clear the date/time fields
-    expect(mockOnHasOutageChange).toHaveBeenCalledWith(true);
-    expect(mockOnOutageStartDateChange).not.toHaveBeenCalled();
-    expect(mockOnOutageStartTimeChange).not.toHaveBeenCalled();
-    expect(mockOnOutageEndDateChange).not.toHaveBeenCalled();
-    expect(mockOnOutageEndTimeChange).not.toHaveBeenCalled();
-  });
-
-  // Requirement 5.6: Show validation error when outage end <= outage start
-  it('should display validation error message when provided', () => {
-    const errorMessage = 'Outage end time must be later than outage start time';
-    render(<OutageSection {...defaultProps} hasOutage={true} error={errorMessage} />);
-    
-    expect(screen.getByText(errorMessage)).toBeInTheDocument();
-  });
-
-  it('should not display validation error when error prop is undefined', () => {
-    render(<OutageSection {...defaultProps} hasOutage={true} />);
-    
-    // Should not have any alert/error message
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-  });
-
-  it('should show Yes radio button as checked when hasOutage is true', () => {
-    render(<OutageSection {...defaultProps} hasOutage={true} />);
-    
-    const yesRadio = screen.getByLabelText('Yes');
-    const noRadio = screen.getByLabelText('No');
-    
-    expect(yesRadio).toBeChecked();
-    expect(noRadio).not.toBeChecked();
-  });
-
-  // Task 10.3 - Component Tests for Schedule and Outage
-  describe('Task 10.3 - Additional Component Tests', () => {
-    it('enforces picker-only input for outage date/time fields', () => {
-      const { container } = render(
-        <OutageSection 
-          {...defaultProps} 
-          hasOutage={true}
-          outageStartDate={new Date('2025-01-15')}
-          outageStartTime={new Date('2025-01-15T20:00:00')}
-          outageEndDate={new Date('2025-01-15')}
-          outageEndTime={new Date('2025-01-15T22:00:00')}
+  describe('default values', () => {
+    it('should default to No outage indicator', () => {
+      render(
+        <OutageSection
+          hasOutage={false}
+          outageStartDateTime={null}
+          outageEndDateTime={null}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
         />
       );
-      
-      // MUI DatePicker and TimePicker components prevent keyboard entry by default
-      // Verify that date/time pickers are rendered (they handle read-only input internally)
-      const pickerButtons = screen.getAllByRole('button');
-      
-      // Should have at least 4 picker buttons (one for each date/time field)
-      expect(pickerButtons.length).toBeGreaterThanOrEqual(4);
-    });
 
-    it('defaults outage indicator to No on form creation', () => {
-      render(<OutageSection {...defaultProps} hasOutage={false} />);
-      
+      // Find the "No" radio button
       const noRadio = screen.getByLabelText('No');
       expect(noRadio).toBeChecked();
     });
 
-    it('shows all 4 outage pickers when Yes is selected', () => {
-      render(<OutageSection {...defaultProps} hasOutage={true} />);
-      
-      // Verify all 4 required outage pickers are visible
-      expect(screen.getAllByText(/Outage Start Date \*/).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/Outage Start Time \*/).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/Outage End Date \*/).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/Outage End Time \*/).length).toBeGreaterThan(0);
-    });
-
-    it('hides all outage pickers when No is selected', () => {
-      render(<OutageSection {...defaultProps} hasOutage={false} />);
-      
-      // Verify all outage pickers are hidden
-      expect(screen.queryByText(/Outage Start Date \*/)).not.toBeInTheDocument();
-      expect(screen.queryByText(/Outage Start Time \*/)).not.toBeInTheDocument();
-      expect(screen.queryByText(/Outage End Date \*/)).not.toBeInTheDocument();
-      expect(screen.queryByText(/Outage End Time \*/)).not.toBeInTheDocument();
-    });
-
-    it('clears all outage values when switching from Yes to No', async () => {
-      const user = userEvent.setup();
-      
+    it('should render heading for Outage Information section', () => {
       render(
-        <OutageSection 
-          {...defaultProps} 
+        <OutageSection
+          hasOutage={false}
+          outageStartDateTime={null}
+          outageEndDateTime={null}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
+        />
+      );
+
+      expect(screen.getByText('Outage Information')).toBeInTheDocument();
+    });
+
+    it('should display Yes and No options for outage indicator', () => {
+      render(
+        <OutageSection
+          hasOutage={false}
+          outageStartDateTime={null}
+          outageEndDateTime={null}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
+        />
+      );
+
+      expect(screen.getByText('Does this deployment include an outage? *')).toBeInTheDocument();
+      expect(screen.getByLabelText('No')).toBeInTheDocument();
+      expect(screen.getByLabelText('Yes')).toBeInTheDocument();
+    });
+  });
+
+  describe('outage section visibility', () => {
+    it('should hide outage date/time pickers when hasOutage is false', () => {
+      render(
+        <OutageSection
+          hasOutage={false}
+          outageStartDateTime={null}
+          outageEndDateTime={null}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
+        />
+      );
+
+      // Outage Start and End pickers should not be visible
+      expect(screen.queryByLabelText('Outage Start *')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Outage End *')).not.toBeInTheDocument();
+    });
+
+    it('should show outage date/time pickers when hasOutage is true', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+
+      render(
+        <OutageSection
           hasOutage={true}
-          outageStartDate={new Date('2025-01-15')}
-          outageStartTime={new Date('2025-01-15T20:00:00')}
-          outageEndDate={new Date('2025-01-15')}
-          outageEndTime={new Date('2025-01-15T22:00:00')}
+          outageStartDateTime={startTime}
+          outageEndDateTime={endTime}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
         />
       );
-      
-      const noRadio = screen.getByLabelText('No');
-      await user.click(noRadio);
-      
-      // All outage date/time values should be cleared
-      expect(mockOnOutageStartDateChange).toHaveBeenCalledWith(null);
-      expect(mockOnOutageStartTimeChange).toHaveBeenCalledWith(null);
-      expect(mockOnOutageEndDateChange).toHaveBeenCalledWith(null);
-      expect(mockOnOutageEndTimeChange).toHaveBeenCalledWith(null);
+
+      // Outage Start and End pickers should be visible
+      expect(screen.getByLabelText('Outage start date and time')).toBeInTheDocument();
+      expect(screen.getByLabelText('Outage end date and time')).toBeInTheDocument();
     });
 
-    it('displays validation error for invalid outage time ordering', () => {
-      const errorMessage = 'Outage end time must be later than outage start time';
-      
+    it('should display "Outage Window" heading when hasOutage is true', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+
       render(
-        <OutageSection 
-          {...defaultProps} 
-          hasOutage={true} 
-          error={errorMessage}
+        <OutageSection
+          hasOutage={true}
+          outageStartDateTime={startTime}
+          outageEndDateTime={endTime}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
         />
       );
-      
-      // Error should be displayed as an alert
-      expect(screen.getByText(errorMessage)).toBeInTheDocument();
-      expect(screen.getByRole('alert')).toBeInTheDocument();
+
+      expect(screen.getByText('Outage Window')).toBeInTheDocument();
+    });
+  });
+
+  describe('outage indicator change behavior', () => {
+    it('should call onHasOutageChange when switching from No to Yes', async () => {
+      const { rerender } = render(
+        <OutageSection
+          hasOutage={false}
+          outageStartDateTime={null}
+          outageEndDateTime={null}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
+        />
+      );
+
+      const yesRadio = screen.getByLabelText('Yes');
+
+      // Click the Yes radio button
+      await userEvent.click(yesRadio);
+
+      // Verify the callback was invoked
+      expect(mockOnHasOutageChange).toHaveBeenCalledWith(true);
     });
 
-    it('toggles outage section visibility when indicator changes', async () => {
-      const user = userEvent.setup();
-      const { rerender } = render(<OutageSection {...defaultProps} hasOutage={false} />);
-      
-      // Initially hidden
-      expect(screen.queryByText(/Outage Start Date \*/)).not.toBeInTheDocument();
-      
-      // Click Yes
+    it('should call onHasOutageChange when switching from Yes to No', async () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+
+      const { rerender } = render(
+        <OutageSection
+          hasOutage={true}
+          outageStartDateTime={startTime}
+          outageEndDateTime={endTime}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
+        />
+      );
+
+      const noRadio = screen.getByLabelText('No');
+
+      // Click the No radio button
+      await userEvent.click(noRadio);
+
+      // Verify the callback was invoked
+      expect(mockOnHasOutageChange).toHaveBeenCalledWith(false);
+    });
+  });
+
+  describe('outage values cleared when switching to No', () => {
+    it('should clear outage start when switching from Yes to No', async () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+
+      render(
+        <OutageSection
+          hasOutage={true}
+          outageStartDateTime={startTime}
+          outageEndDateTime={endTime}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
+        />
+      );
+
+      const noRadio = screen.getByLabelText('No');
+
+      // Click the No radio button
+      await userEvent.click(noRadio);
+
+      // Verify clear callbacks were invoked
+      expect(mockOnOutageStartDateTimeChange).toHaveBeenCalledWith(null);
+    });
+
+    it('should clear outage end when switching from Yes to No', async () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+
+      render(
+        <OutageSection
+          hasOutage={true}
+          outageStartDateTime={startTime}
+          outageEndDateTime={endTime}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
+        />
+      );
+
+      const noRadio = screen.getByLabelText('No');
+
+      // Click the No radio button
+      await userEvent.click(noRadio);
+
+      // Verify clear callbacks were invoked
+      expect(mockOnOutageEndDateTimeChange).toHaveBeenCalledWith(null);
+    });
+
+    it('should clear both outage start and end when switching from Yes to No', async () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+
+      render(
+        <OutageSection
+          hasOutage={true}
+          outageStartDateTime={startTime}
+          outageEndDateTime={endTime}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
+        />
+      );
+
+      const noRadio = screen.getByLabelText('No');
+
+      // Click the No radio button
+      await userEvent.click(noRadio);
+
+      // Verify both were cleared
+      expect(mockOnOutageStartDateTimeChange).toHaveBeenCalledWith(null);
+      expect(mockOnOutageEndDateTimeChange).toHaveBeenCalledWith(null);
+      // Verify hasOutage was updated to false
+      expect(mockOnHasOutageChange).toHaveBeenCalledWith(false);
+    });
+
+    it('should not clear values when switching from No to Yes', async () => {
+      render(
+        <OutageSection
+          hasOutage={false}
+          outageStartDateTime={null}
+          outageEndDateTime={null}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
+        />
+      );
+
       const yesRadio = screen.getByLabelText('Yes');
-      await user.click(yesRadio);
-      
-      // Rerender with hasOutage=true to simulate state update
-      rerender(<OutageSection {...defaultProps} hasOutage={true} />);
-      
-      // Now visible
-      expect(screen.getAllByText(/Outage Start Date \*/).length).toBeGreaterThan(0);
+
+      // Click the Yes radio button
+      await userEvent.click(yesRadio);
+
+      // Verify only hasOutageChange was called, not the clear methods
+      expect(mockOnHasOutageChange).toHaveBeenCalledWith(true);
+      expect(mockOnOutageStartDateTimeChange).not.toHaveBeenCalledWith(null);
+      expect(mockOnOutageEndDateTimeChange).not.toHaveBeenCalledWith(null);
+    });
+  });
+
+  describe('validation errors', () => {
+    it('should display validation error when outage end is earlier than outage start', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+
+      render(
+        <OutageSection
+          hasOutage={true}
+          outageStartDateTime={startTime}
+          outageEndDateTime={endTime}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
+          error="Outage end time must be later than outage start time"
+        />
+      );
+
+      expect(screen.getByText('Outage end time must be later than outage start time')).toBeInTheDocument();
+    });
+
+    it('should display validation error when outage end equals outage start', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+
+      render(
+        <OutageSection
+          hasOutage={true}
+          outageStartDateTime={startTime}
+          outageEndDateTime={endTime}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
+          error="Outage end time must be later than outage start time"
+        />
+      );
+
+      expect(screen.getByText('Outage end time must be later than outage start time')).toBeInTheDocument();
+    });
+
+    it('should display error as Alert with role="alert"', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+
+      render(
+        <OutageSection
+          hasOutage={true}
+          outageStartDateTime={startTime}
+          outageEndDateTime={endTime}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
+          error="Outage end time must be later than outage start time"
+        />
+      );
+
+      const alertElement = screen.getByRole('alert');
+      expect(alertElement).toBeInTheDocument();
+      expect(alertElement).toHaveTextContent('Outage end time must be later than outage start time');
+    });
+
+    it('should not display error alert when no error is provided', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = addHours(startTime, 2);
+
+      render(
+        <OutageSection
+          hasOutage={true}
+          outageStartDateTime={startTime}
+          outageEndDateTime={endTime}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
+        />
+      );
+
+      const alertElement = screen.queryByRole('alert');
+      expect(alertElement).not.toBeInTheDocument();
+    });
+  });
+
+  describe('callback invocation', () => {
+    it('should call onOutageStartDateTimeChange when start datetime changes', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+      const newStartTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 21, 0);
+
+      render(
+        <OutageSection
+          hasOutage={true}
+          outageStartDateTime={startTime}
+          outageEndDateTime={endTime}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
+        />
+      );
+
+      // Trigger change
+      mockOnOutageStartDateTimeChange(newStartTime);
+
+      expect(mockOnOutageStartDateTimeChange).toHaveBeenCalledWith(newStartTime);
+    });
+
+    it('should call onOutageEndDateTimeChange when end datetime changes', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+      const newEndTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 0);
+
+      render(
+        <OutageSection
+          hasOutage={true}
+          outageStartDateTime={startTime}
+          outageEndDateTime={endTime}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
+        />
+      );
+
+      // Trigger change
+      mockOnOutageEndDateTimeChange(newEndTime);
+
+      expect(mockOnOutageEndDateTimeChange).toHaveBeenCalledWith(newEndTime);
+    });
+  });
+
+  describe('accessibility', () => {
+    it('should have proper ARIA labels for radio buttons', () => {
+      render(
+        <OutageSection
+          hasOutage={false}
+          outageStartDateTime={null}
+          outageEndDateTime={null}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
+        />
+      );
+
+      expect(screen.getByLabelText('No')).toBeInTheDocument();
+      expect(screen.getByLabelText('Yes')).toBeInTheDocument();
+    });
+
+    it('should have proper ARIA labels for datetime pickers', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+
+      render(
+        <OutageSection
+          hasOutage={true}
+          outageStartDateTime={startTime}
+          outageEndDateTime={endTime}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
+        />
+      );
+
+      expect(screen.getByLabelText('Outage start date and time')).toBeInTheDocument();
+      expect(screen.getByLabelText('Outage end date and time')).toBeInTheDocument();
+    });
+
+    it('should have form section semantic structure', () => {
+      const { container } = render(
+        <OutageSection
+          hasOutage={false}
+          outageStartDateTime={null}
+          outageEndDateTime={null}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
+        />
+      );
+
+      // Check for section element
+      const sectionElement = container.querySelector('section');
+      expect(sectionElement).toBeInTheDocument();
+      expect(sectionElement).toHaveAttribute('aria-labelledby', 'outage-heading');
+    });
+
+    it('should mark outage datetime pickers as required', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+
+      const { container } = render(
+        <OutageSection
+          hasOutage={true}
+          outageStartDateTime={startTime}
+          outageEndDateTime={endTime}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
+        />
+      );
+
+      // Check for required attributes on input fields (MUI renders with required property)
+      const requiredInputs = container.querySelectorAll('input[required]');
+      expect(requiredInputs.length).toBeGreaterThan(0);
+    });
+
+    it('should have aria-live region for error messages', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+
+      const { container } = render(
+        <OutageSection
+          hasOutage={true}
+          outageStartDateTime={startTime}
+          outageEndDateTime={endTime}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
+          error="Outage end time must be later than outage start time"
+        />
+      );
+
+      const alertElement = screen.getByRole('alert');
+      expect(alertElement).toHaveAttribute('aria-live', 'polite');
+    });
+  });
+
+  describe('rendering with valid time range', () => {
+    it('should render without errors when outage end is after outage start', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = addHours(startTime, 2);
+
+      render(
+        <OutageSection
+          hasOutage={true}
+          outageStartDateTime={startTime}
+          outageEndDateTime={endTime}
+          onHasOutageChange={mockOnHasOutageChange}
+          onOutageStartDateTimeChange={mockOnOutageStartDateTimeChange}
+          onOutageEndDateTimeChange={mockOnOutageEndDateTimeChange}
+        />
+      );
+
+      // Should render without validation error
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
   });
 });

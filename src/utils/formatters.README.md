@@ -10,7 +10,7 @@ This module implements the title generation functions required for Task 4.1 of t
 
 Generates the deployment title in the standardized format used across all notification artifacts.
 
-**Format:** `[CHG#####] — [Application Name: Release Version - Deploy Product to ENVIRONMENT]`
+**Format:** `[CHG#####] — [Application Name: Release Version - Deploy to ENVIRONMENT]`
 
 **Behavior:**
 - Returns a complete title when all required fields are present:
@@ -31,7 +31,7 @@ generateDeploymentTitle({
   environment: 'PROD',
   ...
 })
-// Returns: "[CHG12345] — [Crew Portal: v5.4.1 - Deploy Product to PROD]"
+// Returns: "[CHG12345] — [Crew Portal: v5.4.1 - Deploy to PROD]"
 
 // Missing application
 generateDeploymentTitle({
@@ -68,7 +68,7 @@ generateNotificationHeader('AO Crew Training')
 
 - **Requirement 2.4**: WHEN the coordinator selects or changes the selected application, THE Title_Generator SHALL re-derive the Deployment_Title to reflect the currently selected application name.
 - **Requirement 2.5**: WHEN the coordinator selects or changes the selected application, THE Portal SHALL re-derive the Notification_Header to reflect the currently selected application name.
-- **Requirement 3.6**: THE Title_Generator SHALL compute the Deployment_Title in the format `[CHG#####] — [Application Name: Release Version - Deploy Product to ENVIRONMENT]`.
+- **Requirement 3.6**: THE Title_Generator SHALL compute the Deployment_Title in the format `[CHG#####] — [Application Name: Release Version - Deploy to ENVIRONMENT]`.
 
 ## Test Coverage
 

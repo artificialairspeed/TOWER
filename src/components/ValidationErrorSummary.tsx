@@ -26,11 +26,14 @@ export interface ValidationErrorSummaryProps {
  * 
  * Displays all validation errors in a prominent alert box.
  * Groups errors by section for better readability.
+ * 
+ * Performance optimization:
+ * - Wrapped with React.memo to prevent re-renders when parent changes (22.2)
  */
-export const ValidationErrorSummary: React.FC<ValidationErrorSummaryProps> = ({
+function ValidationErrorSummaryComponent({
   errors,
   formNumber
-}) => {
+}: ValidationErrorSummaryProps) {
   // Don't render if no errors
   if (errors.length === 0) {
     return null;
@@ -51,13 +54,10 @@ export const ValidationErrorSummary: React.FC<ValidationErrorSummaryProps> = ({
       changeNumber: 'Change Number',
       releaseVersion: 'Release Version',
       environment: 'Environment',
-      deploymentDate: 'Deployment Date',
-      startTime: 'Start Time',
-      endTime: 'End Time',
-      outageStartDate: 'Outage Start Date',
-      outageStartTime: 'Outage Start Time',
-      outageEndDate: 'Outage End Date',
-      outageEndTime: 'Outage End Time',
+      startDateTime: 'Deployment Start',
+      endDateTime: 'Deployment End',
+      outageStartDateTime: 'Outage Start',
+      outageEndDateTime: 'Outage End',
       changeItems: 'Change Items',
       impactItems: 'Impact Items',
       contactName: 'Contact Name',
@@ -102,4 +102,7 @@ export const ValidationErrorSummary: React.FC<ValidationErrorSummaryProps> = ({
       </Box>
     </Alert>
   );
-};
+}
+
+// Wrap component with React.memo to prevent re-renders (22.2: Performance optimization)
+export const ValidationErrorSummary = React.memo(ValidationErrorSummaryComponent);

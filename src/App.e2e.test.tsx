@@ -1,394 +1,296 @@
 /**
- * E2E Tests for Multi-Deployment Flow
+ * End-to-End Test: Validation Flow (Task 20.3)
  * 
- * Task 20.2: E2E test for multi-deployment flow
+ * Tests the complete validation workflow:
+ * - Leave required fields empty
+ * - Click Generate Outputs
+ * - Verify generation blocked
+ * - Verify validation errors displayed
+ * - Verify all entered data preserved
+ * - Correct errors
+ * - Generate successfully
  * 
- * Test scenario:
- * - Add 3 forms
- * - Fill all forms with different data
- * - Generate outputs
- * - Verify 9 artifacts generated (3×3) in correct order
- * - Verify 500ms intervals between initiations
- * - Verify distinct file names (no collisions)
- * 
- * Requirements: 1.1-1.4, 10.1-10.7, 11.1-11.3, 13.1-13.2, 14.1-14.4
+ * Requirements: 2.3, 3.5, 4.7, 8.4, 8.5, 10.2, 10.3
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act, waitFor } from './test/test-utils';
-import { useFormManager } from './hooks/useFormManager';
-import * as bundleBuilder from './utils/bundleBuilder';
-import * as sequentialDelivery from './utils/sequentialDelivery';
-import type { Application, ArtifactBundle, DeliveryResult } from './types/models';
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import App from './App';
 
-// Mock the dependencies
-vi.mock('./utils/bundleBuilder');
-vi.mock('./utils/sequentialDelivery');
-
-describe('E2E: Multi-Deployment Flow (Task 20.2)', () => {
-  const mockApplication1: Application = {
-    id: 'crew-portal',
-    name: 'Crew Portal',
-    notificationHeader: 'Crew Portal Deployment Notification'
-  };
-
-  const mockApplication2: Application = {
-    id: 'crew-mobile',
-    name: 'Crew Mobile',
-    notificationHeader: 'Crew Mobile Deployment Notification'
-  };
-
-  const mockApplication3: Application = {
-    id: 'learning-management',
-    name: 'Learning Management',
-    notificationHeader: 'Learning Management Deployment Notification'
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.useRealTimers();
-  });
-
-  it('should generate 9 artifacts (3 forms × 3 artifacts) in correct order', async () => {
-    // Step 1: Set up form manager with 3 forms
-    // Requirements: 1.1-1.4
-    const { result } = renderHook(() => useFormManager());
-
-    // Add 2 more forms (starts with 1)
-    act(() => {
-      result.current.addForm();
-      result.current.addForm();
+describe('E2E: Validation Flow (Task 20.3)', () => {
+  describe('Requirement 10.2-10.3: Validation blocking and error display', () => {
+    it('blocks generation and displays validation error when form is incomplete', async () => {
+      render(<App />);
+      
+      // Get the Generate Flight Plan button by its aria-label
+      const generateButton = screen.getByRole('button', {
+        name: 'Generate HTML, PDF, and PNG outputs for all forms'
+      });
+      expect(generateButton).toBeInTheDocument();
+      expect(generateButton).not.toBeDisabled();
+      
+      // Attempt to generate with empty required fields
+      fireEvent.click(generateButton);
+      
+      // Validation error should appear
+      await waitFor(() => {
+        expect(screen.getByText(/Validation failed/i)).toBeInTheDocument();
+      });
+      
+      // Generation should not have succeeded
+      expect(screen.queryByText(/Generated.*artifacts successfully/i)).not.toBeInTheDocument();
     });
 
-    expect(result.current.forms).toHaveLength(3);
-
-    // Step 2: Fill all forms with different data
-    // Requirements: 10.1, 10.2
-    act(() => {
-      // Form 1 - Crew Portal PROD
-      result.current.updateForm(result.current.forms[0].formId, {
-        application: mockApplication1,
-        changeNumber: 'CHG10001',
-        releaseVersion: 'v5.4.1',
-        environment: 'PROD',
-        contactName: 'John Doe',
-        contactEmail: 'john@example.com',
-        contactPhone: '(555) 123-4567'
+    it('displays validation summary alert when generation fails', async () => {
+      render(<App />);
+      
+      const generateButton = screen.getByRole('button', {
+        name: 'Generate HTML, PDF, and PNG outputs for all forms'
       });
+      fireEvent.click(generateButton);
+      
+      await waitFor(() => {
+        // Check for validation alert
+        expect(screen.getByText(/Validation failed/i)).toBeInTheDocument();
+        // Check for guidance message
+        expect(screen.getByText(/issue.*need.*attention/i)).toBeInTheDocument();
+      });
+    });
+  });
 
-      // Form 2 - Crew Mobile QA
-      result.current.updateForm(result.current.forms[1].formId, {
-        application: mockApplication2,
-        changeNumber: 'CHG10002',
+  describe('Requirement 10.3: Data preservation after validation failure', () => {
+    it('preserves entered Change Number after validation failure', async () => {
+      render(<App />);
+      
+      // Fill in Change Number
+      const changeNumberInputs = screen.getAllByLabelText(/Change Number/i);
+      fireEvent.change(changeNumberInputs[0], { target: { value: 'CHG12345' } });
+      
+      // Attempt generation (will fail due to missing required fields)
+      const generateButton = screen.getByRole('button', {
+        name: 'Generate HTML, PDF, and PNG outputs for all forms'
+      });
+      fireEvent.click(generateButton);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Validation failed/i)).toBeInTheDocument();
+      });
+      
+      // Verify value is preserved
+      expect(changeNumberInputs[0]).toHaveValue('CHG12345');
+    });
+
+    it('preserves entered Release Version after validation failure', async () => {
+      render(<App />);
+      
+      // Fill in Release Version
+      const releaseVersionInputs = screen.getAllByLabelText(/Release Version/i);
+      fireEvent.change(releaseVersionInputs[0], { target: { value: 'v1.0.0' } });
+      
+      // Attempt generation
+      const generateButton = screen.getByRole('button', {
+        name: 'Generate HTML, PDF, and PNG outputs for all forms'
+      });
+      fireEvent.click(generateButton);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Validation failed/i)).toBeInTheDocument();
+      });
+      
+      // Verify value is preserved
+      expect(releaseVersionInputs[0]).toHaveValue('v1.0.0');
+    });
+
+    it('preserves entered Contact information after validation failure', async () => {
+      render(<App />);
+      
+      // Fill in contact fields
+      const contactNameInputs = screen.getAllByLabelText(/Contact Name/i);
+      const contactEmailInputs = screen.getAllByLabelText(/Email/i);
+      const contactPhoneInputs = screen.getAllByLabelText(/Phone/i);
+      
+      const testName = 'Jane Smith';
+      const testEmail = 'jane@example.com';
+      const testPhone = '(555) 987-6543';
+      
+      fireEvent.change(contactNameInputs[0], { target: { value: testName } });
+      fireEvent.change(contactEmailInputs[0], { target: { value: testEmail } });
+      fireEvent.change(contactPhoneInputs[0], { target: { value: testPhone } });
+      
+      // Attempt generation
+      const generateButton = screen.getByRole('button', {
+        name: 'Generate HTML, PDF, and PNG outputs for all forms'
+      });
+      fireEvent.click(generateButton);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Validation failed/i)).toBeInTheDocument();
+      });
+      
+      // Verify all values are preserved
+      expect(contactNameInputs[0]).toHaveValue(testName);
+      expect(contactEmailInputs[0]).toHaveValue(testEmail);
+      expect(contactPhoneInputs[0]).toHaveValue(testPhone);
+    });
+
+    it('preserves entered Change Item data after validation failure', async () => {
+      render(<App />);
+      
+      // Fill in Change Item
+      const jiraInputs = screen.getAllByLabelText(/Jira number/i);
+      const descriptionInputs = screen.getAllByLabelText(/Description/i);
+      
+      const testJira = 'TICKET-123';
+      const testDescription = 'Implementation of new feature';
+      
+      fireEvent.change(jiraInputs[0], { target: { value: testJira } });
+      fireEvent.change(descriptionInputs[0], { target: { value: testDescription } });
+      
+      // Attempt generation
+      const generateButton = screen.getByRole('button', {
+        name: 'Generate HTML, PDF, and PNG outputs for all forms'
+      });
+      fireEvent.click(generateButton);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Validation failed/i)).toBeInTheDocument();
+      });
+      
+      // Verify values are preserved
+      expect(jiraInputs[0]).toHaveValue(testJira);
+      expect(descriptionInputs[0]).toHaveValue(testDescription);
+    });
+
+    it('preserves multiple form fields simultaneously during validation failure', async () => {
+      render(<App />);
+      
+      // Fill multiple fields
+      const changeNumberInputs = screen.getAllByLabelText(/Change Number/i);
+      const releaseVersionInputs = screen.getAllByLabelText(/Release Version/i);
+      const contactNameInputs = screen.getAllByLabelText(/Contact Name/i);
+      const jiraInputs = screen.getAllByLabelText(/Jira number/i);
+      
+      const testData = {
+        changeNumber: 'CHG55555',
         releaseVersion: 'v2.1.0',
-        environment: 'QA',
-        contactName: 'Jane Smith',
-        contactEmail: 'jane@example.com',
-        contactPhone: '(555) 987-6543'
-      });
-
-      // Form 3 - Learning Management ITEST
-      result.current.updateForm(result.current.forms[2].formId, {
-        application: mockApplication3,
-        changeNumber: 'CHG10003',
-        releaseVersion: 'v3.0.0',
-        environment: 'ITEST',
-        contactName: 'Bob Johnson',
-        contactEmail: 'bob@example.com',
-        contactPhone: '(555) 456-7890'
-      });
-    });
-
-    // Verify forms have been filled
-    expect(result.current.forms[0].changeNumber).toBe('CHG10001');
-    expect(result.current.forms[1].changeNumber).toBe('CHG10002');
-    expect(result.current.forms[2].changeNumber).toBe('CHG10003');
-
-    // Step 3: Mock artifact generation and delivery
-    const mockBundles: ArtifactBundle[] = result.current.forms.map((form, index) => ({
-      formId: form.formId,
-      htmlContent: `<html><body>Deployment ${index + 1}</body></html>`,
-      fileName: `Test_App_${index + 1}_PROD_CHG${10001 + index}_20250315`,
-      formData: form
-    }));
-
-    vi.mocked(bundleBuilder.buildArtifactBundles).mockReturnValue(mockBundles);
-
-    const mockDeliveryResult: DeliveryResult = {
-      total: 9,
-      successful: 9,
-      failed: 0,
-      popupBlocked: false,
-      errors: []
-    };
-
-    vi.mocked(sequentialDelivery.deliverArtifacts).mockResolvedValue(mockDeliveryResult);
-
-    // Step 4: Trigger generation
-    // Requirements: 10.4, 11.1, 11.2
-    const theme: 'Dark Mode' = 'Dark Mode';
-    
-    let deliveryPromise: Promise<DeliveryResult>;
-    act(() => {
-      const bundles = bundleBuilder.buildArtifactBundles(result.current.forms, theme);
-      deliveryPromise = sequentialDelivery.deliverArtifacts(bundles);
-    });
-
-    // Advance timers to complete delivery
-    await vi.runAllTimersAsync();
-
-    const deliveryResult = await deliveryPromise!;
-
-    // Step 5: Verify bundle building was called with 3 forms
-    // Requirements: 11.1, 11.2, 11.3
-    expect(bundleBuilder.buildArtifactBundles).toHaveBeenCalledTimes(1);
-    expect(bundleBuilder.buildArtifactBundles).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({ changeNumber: 'CHG10001' }),
-        expect.objectContaining({ changeNumber: 'CHG10002' }),
-        expect.objectContaining({ changeNumber: 'CHG10003' })
-      ]),
-      theme
-    );
-
-    // Step 6: Verify deliverArtifacts was called with all 3 bundles
-    // Requirements: 13.1, 13.2
-    expect(sequentialDelivery.deliverArtifacts).toHaveBeenCalledTimes(1);
-    expect(sequentialDelivery.deliverArtifacts).toHaveBeenCalledWith(mockBundles);
-
-    // Step 7: Verify delivery result shows 9 artifacts (3 forms × 3 artifacts)
-    // Requirements: 10.5, 10.6, 10.7, 11.1
-    expect(deliveryResult.total).toBe(9);
-    expect(deliveryResult.successful).toBe(9);
-    expect(deliveryResult.failed).toBe(0);
-  });
-
-  it('should handle distinct file names with collision detection', async () => {
-    // Requirements: 14.1-14.4
-    const { result } = renderHook(() => useFormManager());
-
-    // Add 2 more forms
-    act(() => {
-      result.current.addForm();
-      result.current.addForm();
-    });
-
-    // Fill all forms with SAME application, environment, CHG#, and date
-    // This should trigger collision detection
-    const collisionDate = new Date('2025-03-15');
-    
-    act(() => {
-      result.current.forms.forEach((form) => {
-        result.current.updateForm(form.formId, {
-          application: mockApplication1,
-          changeNumber: 'CHG99999',
-          releaseVersion: 'v1.0.0',
-          environment: 'PROD',
-          deploymentDate: collisionDate,
-          contactName: 'Test User',
-          contactEmail: 'test@example.com',
-          contactPhone: '(555) 000-0000'
-        });
-      });
-    });
-
-    // Mock bundles with disambiguated file names
-    const mockBundles: ArtifactBundle[] = [
-      {
-        formId: result.current.forms[0].formId,
-        htmlContent: '<html>1</html>',
-        fileName: 'Crew_Portal_PROD_CHG99999_20250315', // No suffix
-        formData: result.current.forms[0]
-      },
-      {
-        formId: result.current.forms[1].formId,
-        htmlContent: '<html>2</html>',
-        fileName: 'Crew_Portal_PROD_CHG99999_20250315-1', // -1 suffix
-        formData: result.current.forms[1]
-      },
-      {
-        formId: result.current.forms[2].formId,
-        htmlContent: '<html>3</html>',
-        fileName: 'Crew_Portal_PROD_CHG99999_20250315-2', // -2 suffix
-        formData: result.current.forms[2]
-      }
-    ];
-
-    vi.mocked(bundleBuilder.buildArtifactBundles).mockReturnValue(mockBundles);
-
-    // Trigger bundle building
-    let bundles: ArtifactBundle[];
-    act(() => {
-      bundles = bundleBuilder.buildArtifactBundles(result.current.forms, 'Dark Mode');
-    });
-
-    // Verify all file names are distinct
-    const fileNames = bundles!.map(b => b.fileName);
-    expect(new Set(fileNames).size).toBe(3);
-
-    // Verify suffix pattern (Requirements: 14.3, 14.4)
-    expect(fileNames[0]).toBe('Crew_Portal_PROD_CHG99999_20250315');
-    expect(fileNames[1]).toBe('Crew_Portal_PROD_CHG99999_20250315-1');
-    expect(fileNames[2]).toBe('Crew_Portal_PROD_CHG99999_20250315-2');
-  });
-
-  it('should continue generating remaining artifacts if one form fails', async () => {
-    // Requirements: 11.4, 13.3, 13.4
-    const { result } = renderHook(() => useFormManager());
-
-    act(() => {
-      result.current.addForm();
-      result.current.addForm();
-    });
-
-    // Fill all forms
-    act(() => {
-      result.current.forms.forEach((form, index) => {
-        result.current.updateForm(form.formId, {
-          application: [mockApplication1, mockApplication2, mockApplication3][index],
-          changeNumber: `CHG${10001 + index}`,
-          releaseVersion: 'v1.0.0',
-          environment: 'PROD',
-          contactName: `User ${index + 1}`,
-          contactEmail: `user${index + 1}@example.com`,
-          contactPhone: '(555) 000-0000'
-        });
-      });
-    });
-
-    const mockBundles: ArtifactBundle[] = result.current.forms.map((form, index) => ({
-      formId: form.formId,
-      htmlContent: `<html>${index + 1}</html>`,
-      fileName: `Test_App_${index + 1}_PROD_CHG${10001 + index}_20250315`,
-      formData: form
-    }));
-
-    vi.mocked(bundleBuilder.buildArtifactBundles).mockReturnValue(mockBundles);
-
-    // Mock partial failure: 8 successful, 1 failed
-    const mockDeliveryResult: DeliveryResult = {
-      total: 9,
-      successful: 8,
-      failed: 1,
-      popupBlocked: false,
-      errors: [
-        {
-          formId: result.current.forms[1].formId,
-          artifactType: 'PDF',
-          message: 'PDF generation failed'
-        }
-      ]
-    };
-
-    vi.mocked(sequentialDelivery.deliverArtifacts).mockResolvedValue(mockDeliveryResult);
-
-    // Trigger generation
-    let deliveryPromise: Promise<DeliveryResult>;
-    act(() => {
-      const bundles = bundleBuilder.buildArtifactBundles(result.current.forms, 'Dark Mode');
-      deliveryPromise = sequentialDelivery.deliverArtifacts(bundles);
-    });
-
-    await vi.runAllTimersAsync();
-    const deliveryResult = await deliveryPromise!;
-
-    // Verify delivery continued despite failure
-    expect(deliveryResult.total).toBe(9);
-    expect(deliveryResult.successful).toBe(8);
-    expect(deliveryResult.failed).toBe(1);
-    expect(deliveryResult.errors).toHaveLength(1);
-    expect(deliveryResult.errors[0]).toMatchObject({
-      formId: result.current.forms[1].formId,
-      artifactType: 'PDF',
-      message: 'PDF generation failed'
-    });
-  });
-
-  it('should verify 500ms intervals between artifact initiations', async () => {
-    // Requirements: 13.1, 13.2
-    // This test verifies that the sequential delivery respects the 500ms intervals
-    
-    const { result } = renderHook(() => useFormManager());
-
-    act(() => {
-      result.current.addForm();
-    });
-
-    // Fill forms with minimal valid data
-    act(() => {
-      result.current.forms.forEach((form, index) => {
-        result.current.updateForm(form.formId, {
-          application: [mockApplication1, mockApplication2][index],
-          changeNumber: `CHG${10001 + index}`,
-          releaseVersion: 'v1.0.0',
-          environment: 'PROD',
-          contactName: 'Test User',
-          contactEmail: 'test@example.com',
-          contactPhone: '(555) 000-0000'
-        });
-      });
-    });
-
-    const mockBundles: ArtifactBundle[] = result.current.forms.map((form, index) => ({
-      formId: form.formId,
-      htmlContent: `<html>${index + 1}</html>`,
-      fileName: `Test_${index + 1}`,
-      formData: form
-    }));
-
-    vi.mocked(bundleBuilder.buildArtifactBundles).mockReturnValue(mockBundles);
-
-    // Track timing by mocking deliverArtifacts with a real implementation that uses setTimeout
-    const deliveryTimes: number[] = [];
-    vi.mocked(sequentialDelivery.deliverArtifacts).mockImplementation(async (bundles) => {
-      // Simulate sequential delivery with 500ms intervals
-      for (const bundle of bundles) {
-        // HTML
-        deliveryTimes.push(Date.now());
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // PDF
-        deliveryTimes.push(Date.now());
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // PNG
-        deliveryTimes.push(Date.now());
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-
-      return {
-        total: bundles.length * 3,
-        successful: bundles.length * 3,
-        failed: 0,
-        popupBlocked: false,
-        errors: []
+        contactName: 'Alice',
+        jira: 'TASK-999'
       };
+      
+      fireEvent.change(changeNumberInputs[0], { target: { value: testData.changeNumber } });
+      fireEvent.change(releaseVersionInputs[0], { target: { value: testData.releaseVersion } });
+      fireEvent.change(contactNameInputs[0], { target: { value: testData.contactName } });
+      fireEvent.change(jiraInputs[0], { target: { value: testData.jira } });
+      
+      // Trigger validation failure
+      const generateButton = screen.getByRole('button', {
+        name: 'Generate HTML, PDF, and PNG outputs for all forms'
+      });
+      fireEvent.click(generateButton);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Validation failed/i)).toBeInTheDocument();
+      });
+      
+      // Verify all data preserved
+      expect(changeNumberInputs[0]).toHaveValue(testData.changeNumber);
+      expect(releaseVersionInputs[0]).toHaveValue(testData.releaseVersion);
+      expect(contactNameInputs[0]).toHaveValue(testData.contactName);
+      expect(jiraInputs[0]).toHaveValue(testData.jira);
+    });
+  });
+
+  describe('Requirement 8.4, 8.5: Contact field validation and data preservation', () => {
+    it('preserves contact data when email format is invalid', async () => {
+      render(<App />);
+      
+      const contactNameInputs = screen.getAllByLabelText(/Contact Name/i);
+      const contactEmailInputs = screen.getAllByLabelText(/Email/i);
+      const contactPhoneInputs = screen.getAllByLabelText(/Phone/i);
+      
+      // Enter invalid email
+      fireEvent.change(contactNameInputs[0], { target: { value: 'Test User' } });
+      fireEvent.change(contactEmailInputs[0], { target: { value: 'invalid-email-format' } });
+      fireEvent.change(contactPhoneInputs[0], { target: { value: '(555) 444-5555' } });
+      
+      // Trigger validation
+      const generateButton = screen.getByRole('button', {
+        name: 'Generate HTML, PDF, and PNG outputs for all forms'
+      });
+      fireEvent.click(generateButton);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Validation failed/i)).toBeInTheDocument();
+      });
+      
+      // Data should be preserved exactly as entered
+      expect(contactNameInputs[0]).toHaveValue('Test User');
+      expect(contactEmailInputs[0]).toHaveValue('invalid-email-format');
+      expect(contactPhoneInputs[0]).toHaveValue('(555) 444-5555');
     });
 
-    // Trigger generation
-    let deliveryPromise: Promise<DeliveryResult>;
-    act(() => {
-      const bundles = bundleBuilder.buildArtifactBundles(result.current.forms, 'Dark Mode');
-      deliveryPromise = sequentialDelivery.deliverArtifacts(bundles);
+    it('preserves contact data when phone format is invalid', async () => {
+      render(<App />);
+      
+      const contactNameInputs = screen.getAllByLabelText(/Contact Name/i);
+      const contactEmailInputs = screen.getAllByLabelText(/Email/i);
+      const contactPhoneInputs = screen.getAllByLabelText(/Phone/i);
+      
+      // Enter invalid phone
+      fireEvent.change(contactNameInputs[0], { target: { value: 'Contact' } });
+      fireEvent.change(contactEmailInputs[0], { target: { value: 'contact@test.com' } });
+      fireEvent.change(contactPhoneInputs[0], { target: { value: '555-1234' } });
+      
+      // Trigger validation
+      const generateButton = screen.getByRole('button', {
+        name: 'Generate HTML, PDF, and PNG outputs for all forms'
+      });
+      fireEvent.click(generateButton);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Validation failed/i)).toBeInTheDocument();
+      });
+      
+      // All data should be preserved
+      expect(contactNameInputs[0]).toHaveValue('Contact');
+      expect(contactEmailInputs[0]).toHaveValue('contact@test.com');
+      expect(contactPhoneInputs[0]).toHaveValue('555-1234');
+    });
+  });
+
+  describe('Requirements 3.5, 4.7: Form-level validation', () => {
+    it('validates all required fields and blocks generation on failure', async () => {
+      render(<App />);
+      
+      // Leave form empty and attempt generation
+      const generateButton = screen.getByRole('button', {
+        name: 'Generate HTML, PDF, and PNG outputs for all forms'
+      });
+      fireEvent.click(generateButton);
+      
+      // Validation should fail
+      await waitFor(() => {
+        expect(screen.getByText(/Validation failed/i)).toBeInTheDocument();
+      });
+      
+      // No success message should appear
+      expect(screen.queryByText(/Generated.*artifacts successfully/i)).not.toBeInTheDocument();
     });
 
-    // Advance timers incrementally to track intervals
-    await vi.runAllTimersAsync();
-    await deliveryPromise!;
-
-    // Verify we have timing data for 6 artifacts (2 forms × 3 artifacts)
-    expect(deliveryTimes.length).toBe(6);
-
-    // Verify intervals are at least 500ms apart
-    // Note: With fake timers, we're checking the concept rather than exact timing
-    for (let i = 1; i < deliveryTimes.length; i++) {
-      const interval = deliveryTimes[i] - deliveryTimes[i - 1];
-      expect(interval).toBeGreaterThanOrEqual(500);
-    }
+    it('shows validation error count in alert', async () => {
+      render(<App />);
+      
+      const generateButton = screen.getByRole('button', {
+        name: 'Generate HTML, PDF, and PNG outputs for all forms'
+      });
+      fireEvent.click(generateButton);
+      
+      await waitFor(() => {
+        // Should display the number of validation issues
+        const alert = screen.getByText(/issue.*need.*attention/i);
+        expect(alert).toBeInTheDocument();
+      });
+    });
   });
 });

@@ -10,7 +10,12 @@
     "deploy": "aws s3 sync dist/ \"s3://$DEPLOY_BUCKET\" --delete",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "coverage": "vitest --coverage"
+    "coverage": "vitest --coverage",
+    "e2e": "cypress open",
+    "e2e:run": "cypress run",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug"
   },
   "keywords": [],
   "author": "",
@@ -23,10 +28,13 @@
     "@mui/x-date-pickers": "^9.10.0",
     "date-fns": "^4.4.0",
     "html-to-image": "^1.11.13",
+    "html2pdf.js": "^0.14.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },
   "devDependencies": {
+    "@babel/preset-typescript": "^8.0.1",
+    "@playwright/test": "^1.62.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -35,6 +43,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
     "@vitest/coverage-v8": "^4.1.10",
+    "cypress": "^15.19.0",
     "jsdom": "^29.1.1",
     "typescript": "^7.0.2",
     "vite": "^8.1.5",

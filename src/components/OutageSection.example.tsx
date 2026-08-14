@@ -12,10 +12,8 @@ import { OutageSection } from './OutageSection';
 export function OutageSectionExample() {
   // Outage state
   const [hasOutage, setHasOutage] = useState(false);
-  const [outageStartDate, setOutageStartDate] = useState<Date | null>(null);
-  const [outageStartTime, setOutageStartTime] = useState<Date | null>(null);
-  const [outageEndDate, setOutageEndDate] = useState<Date | null>(null);
-  const [outageEndTime, setOutageEndTime] = useState<Date | null>(null);
+  const [outageStartDateTime, setOutageStartDateTime] = useState<Date | null>(null);
+  const [outageEndDateTime, setOutageEndDateTime] = useState<Date | null>(null);
   const [error, setError] = useState<string>('');
 
   // Validation function
@@ -26,20 +24,13 @@ export function OutageSectionExample() {
     }
 
     // Check all fields are filled
-    if (!outageStartDate || !outageStartTime || !outageEndDate || !outageEndTime) {
+    if (!outageStartDateTime || !outageEndDateTime) {
       setError('All outage fields are required when outage is indicated');
       return false;
     }
 
-    // Combine date and time for comparison
-    const start = new Date(outageStartDate);
-    start.setHours(outageStartTime.getHours(), outageStartTime.getMinutes(), 0, 0);
-    
-    const end = new Date(outageEndDate);
-    end.setHours(outageEndTime.getHours(), outageEndTime.getMinutes(), 0, 0);
-    
     // Check that end is after start
-    if (end <= start) {
+    if (outageEndDateTime <= outageStartDateTime) {
       setError('Outage end time must be later than outage start time');
       return false;
     }
@@ -59,20 +50,16 @@ export function OutageSectionExample() {
       alert('Validation passed! Outage information is valid.');
       console.log({
         hasOutage,
-        outageStartDate,
-        outageStartTime,
-        outageEndDate,
-        outageEndTime
+        outageStartDateTime,
+        outageEndDateTime
       });
     }
   };
 
   const handleReset = () => {
     setHasOutage(false);
-    setOutageStartDate(null);
-    setOutageStartTime(null);
-    setOutageEndDate(null);
-    setOutageEndTime(null);
+    setOutageStartDateTime(null);
+    setOutageEndDateTime(null);
     setError('');
   };
 
@@ -93,28 +80,18 @@ export function OutageSectionExample() {
         
         <OutageSection
           hasOutage={hasOutage}
-          outageStartDate={outageStartDate}
-          outageStartTime={outageStartTime}
-          outageEndDate={outageEndDate}
-          outageEndTime={outageEndTime}
+          outageStartDateTime={outageStartDateTime}
+          outageEndDateTime={outageEndDateTime}
           onHasOutageChange={(value) => {
             setHasOutage(value);
             handleValidationOnChange();
           }}
-          onOutageStartDateChange={(date) => {
-            setOutageStartDate(date);
+          onOutageStartDateTimeChange={(dateTime) => {
+            setOutageStartDateTime(dateTime);
             handleValidationOnChange();
           }}
-          onOutageStartTimeChange={(time) => {
-            setOutageStartTime(time);
-            handleValidationOnChange();
-          }}
-          onOutageEndDateChange={(date) => {
-            setOutageEndDate(date);
-            handleValidationOnChange();
-          }}
-          onOutageEndTimeChange={(time) => {
-            setOutageEndTime(time);
+          onOutageEndDateTimeChange={(dateTime) => {
+            setOutageEndDateTime(dateTime);
             handleValidationOnChange();
           }}
           error={error}
@@ -139,10 +116,8 @@ export function OutageSectionExample() {
             {JSON.stringify(
               {
                 hasOutage,
-                outageStartDate: outageStartDate?.toISOString() || null,
-                outageStartTime: outageStartTime?.toISOString() || null,
-                outageEndDate: outageEndDate?.toISOString() || null,
-                outageEndTime: outageEndTime?.toISOString() || null,
+                outageStartDateTime: outageStartDateTime?.toISOString() || null,
+                outageEndDateTime: outageEndDateTime?.toISOString() || null,
                 error: error || null
               },
               null,
@@ -161,7 +136,7 @@ export function OutageSectionExample() {
             <strong>Default:</strong> Radio button "No" is selected, date/time pickers are hidden
           </li>
           <li>
-            <strong>Select "Yes":</strong> Four date/time pickers appear (Start Date, Start Time, End Date, End Time)
+            <strong>Select "Yes":</strong> Two DateTimePickers appear (Outage Start, Outage End)
           </li>
           <li>
             <strong>Select "No":</strong> All outage values are cleared and pickers are hidden
@@ -170,7 +145,7 @@ export function OutageSectionExample() {
             <strong>Validation:</strong> When outage end is before or equal to start, an error is displayed
           </li>
           <li>
-            <strong>Required Fields:</strong> All date/time fields are marked as required when outage is indicated
+            <strong>Required Fields:</strong> Both date/time fields are marked as required when outage is indicated
           </li>
         </ul>
       </Paper>

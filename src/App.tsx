@@ -20,6 +20,7 @@ import { useFormManager } from './hooks/useFormManager';
 import { useOutputGenerator } from './hooks/useOutputGenerator';
 import { APPLICATION_CATALOG } from './types/models';
 import { templateProvider } from './utils/templateProvider';
+import { validateFieldOnBlur } from './utils/validators';
 
 /**
  * Main application component
@@ -57,7 +58,7 @@ function App() {
   } = useFormManager();
 
   // Validation error management hook
-  const { getAllErrors, clearFieldError, setErrors } = useValidationErrors();
+  const { getAllErrors, clearFieldError, setErrors, setFieldError } = useValidationErrors();
 
   // Output generation hook (Requirements: 10.1-10.8, 13.1-13.4)
   const {
@@ -72,6 +73,22 @@ function App() {
 
   // Check if application catalog is empty (Requirements: 2.7, 2.8)
   const isCatalogEmpty = APPLICATION_CATALOG.length === 0;
+
+  /**
+   * Handle field blur validation — validates a single field immediately
+   * and sets/clears errors in real time as the user leaves fields.
+   */
+  const handleBlurValidate = React.useCallback(
+    (formId: string, field: string, value: string) => {
+      const error = validateFieldOnBlur(field, value);
+      if (error) {
+        setFieldError(formId, field, error);
+      } else {
+        clearFieldError(formId, field);
+      }
+    },
+    [setFieldError, clearFieldError]
+  );
 
   // Template load state (Requirement: 1.6). `templatesReady` tracks whether the
   // HTML templates have been successfully loaded; `templateError` holds a
@@ -187,6 +204,7 @@ function App() {
                     : 'Generate HTML, PDF, and PNG outputs for all forms'
                 }
                 aria-busy={isGenerating}
+                data-testid="generate-outputs-button"
               >
                 {isGenerating ? 'Generating...' : 'Generate Flight Plan'}
               </Button>
@@ -273,6 +291,7 @@ function App() {
           canRemoveForm={canRemoveForm}
           validationErrors={getAllErrors()}
           onClearFieldError={clearFieldError}
+          onBlurValidate={handleBlurValidate}
           isGenerating={isGenerating}
           progress={progress}
         />
@@ -305,13 +324,13 @@ function App() {
               <>
                 <AlertTitle sx={{ fontWeight: 'bold' }}>
                   {generationSucceeded
-                    ? `Generated ${deliveryResult.successful} artifacts successfully`
+                    ? `${deliveryResult.successful} Flight Plans Dispatched`
                     : `Generated ${deliveryResult.successful} of ${deliveryResult.total} artifacts`}
                 </AlertTitle>
 
                 {deliveryResult.popupBlocked && (
                   <Typography variant="body2" sx={{ mt: 0.5 }}>
-                    The image was downloaded. Allow pop-ups to also open it in a new tab.
+                    Please allow pop-ups to view HTML notifications
                   </Typography>
                 )}
 

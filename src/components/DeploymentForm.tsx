@@ -63,6 +63,8 @@ export interface DeploymentFormProps {
   validationErrors?: ValidationError[];
   /** Callback to clear validation error for a specific field */
   onClearFieldError?: (field: string) => void;
+  /** Callback for onBlur field validation (field, value) */
+  onBlurValidate?: (field: string, value: string) => void;
 }
 
 /**
@@ -78,7 +80,7 @@ export interface DeploymentFormProps {
  * - Highlighted border when form has errors
  * - Clears field errors when user corrects inputs
  */
-export const DeploymentForm: React.FC<DeploymentFormProps> = ({
+function DeploymentFormComponent({
   formData,
   formNumber,
   onUpdate,
@@ -86,8 +88,9 @@ export const DeploymentForm: React.FC<DeploymentFormProps> = ({
   onRemove,
   canRemove,
   validationErrors = [],
-  onClearFieldError
-}) => {
+  onClearFieldError,
+  onBlurValidate
+}: DeploymentFormProps) {
   // Reset confirmation hook - Requirements: 1.9, 1.10, 1.11
   const {
     isOpen: isResetDialogOpen,
@@ -199,6 +202,7 @@ export const DeploymentForm: React.FC<DeploymentFormProps> = ({
           changeNumberError={getFieldError('changeNumber')}
           releaseVersionError={getFieldError('releaseVersion')}
           environmentError={getFieldError('environment')}
+          onBlurValidate={onBlurValidate}
         />
 
         {/* Deployment Title Display (read-only, computed) */}
@@ -206,30 +210,33 @@ export const DeploymentForm: React.FC<DeploymentFormProps> = ({
 
         {/* Schedule Section */}
         <ScheduleSection
-          deploymentDate={formData.deploymentDate}
-          startTime={formData.startTime}
-          endTime={formData.endTime}
-          onDeploymentDateChange={(value) => handleFieldUpdate({ deploymentDate: value ?? new Date() }, 'deploymentDate')}
-          onStartTimeChange={(value) => handleFieldUpdate({ startTime: value ?? new Date() }, 'startTime')}
-          onEndTimeChange={(value) => handleFieldUpdate({ endTime: value ?? new Date() }, 'endTime')}
-          deploymentDateError={getFieldError('deploymentDate')}
-          startTimeError={getFieldError('startTime')}
-          endTimeError={getFieldError('endTime')}
-          timeOrderError={getFieldError('endTime')?.includes('later than Start Time') ? getFieldError('endTime') : undefined}
+          startDateTime={formData.startDateTime}
+          endDateTime={formData.endDateTime}
+          onStartDateTimeChange={(value) => handleFieldUpdate({ startDateTime: value ?? new Date() }, 'startDateTime')}
+          onEndDateTimeChange={(value) => handleFieldUpdate({ endDateTime: value ?? new Date() }, 'endDateTime')}
+          startDateTimeError={getFieldError('startDateTime')}
+          endDateTimeError={getFieldError('endDateTime')}
         />
 
         {/* Outage Section */}
         <OutageSection
           hasOutage={formData.hasOutage}
-          outageStartDate={formData.outageStartDate}
-          outageStartTime={formData.outageStartTime}
-          outageEndDate={formData.outageEndDate}
-          outageEndTime={formData.outageEndTime}
-          onHasOutageChange={(value) => handleFieldUpdate({ hasOutage: value }, 'hasOutage')}
-          onOutageStartDateChange={(value) => handleFieldUpdate({ outageStartDate: value }, 'outageStartDate')}
-          onOutageStartTimeChange={(value) => handleFieldUpdate({ outageStartTime: value }, 'outageStartTime')}
-          onOutageEndDateChange={(value) => handleFieldUpdate({ outageEndDate: value }, 'outageEndDate')}
-          onOutageEndTimeChange={(value) => handleFieldUpdate({ outageEndTime: value }, 'outageEndTime')}
+          outageStartDateTime={formData.outageStartDateTime}
+          outageEndDateTime={formData.outageEndDateTime}
+          onHasOutageChange={(value) => {
+            if (value) {
+              // Default outage start/end from the deployment schedule
+              handleFieldUpdate({
+                hasOutage: value,
+                outageStartDateTime: formData.startDateTime,
+                outageEndDateTime: formData.endDateTime,
+              }, 'hasOutage');
+            } else {
+              handleFieldUpdate({ hasOutage: value }, 'hasOutage');
+            }
+          }}
+          onOutageStartDateTimeChange={(value) => handleFieldUpdate({ outageStartDateTime: value }, 'outageStartDateTime')}
+          onOutageEndDateTimeChange={(value) => handleFieldUpdate({ outageEndDateTime: value }, 'outageEndDateTime')}
         />
 
         {/* Change Items Section */}
@@ -255,6 +262,7 @@ export const DeploymentForm: React.FC<DeploymentFormProps> = ({
           contactNameError={getFieldError('contactName')}
           contactEmailError={getFieldError('contactEmail')}
           contactPhoneError={getFieldError('contactPhone')}
+          onBlurValidate={onBlurValidate}
         />
       </Stack>
 
@@ -287,4 +295,7 @@ export const DeploymentForm: React.FC<DeploymentFormProps> = ({
       </Dialog>
     </Box>
   );
-};
+}
+
+// Wrap component with React.memo to prevent re-renders (22.2: Performance optimization)
+export const DeploymentForm = React.memo(DeploymentFormComponent);

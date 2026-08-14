@@ -6,12 +6,13 @@
  * Requirements:
  * - 5.1: Yes/No outage indicator
  * - 5.2: Default outage indicator to No
- * - 5.3: Conditionally render date/time pickers when Yes selected (4 pickers total)
+ * - 5.3: Conditionally render date/time pickers when Yes selected (2 DateTimePickers)
  * - 5.4: Hide pickers when No selected
  * - 5.5: Clear outage values when switching from Yes to No
  * - 5.6: Show validation error when outage end <= outage start
  */
 
+import React from 'react';
 import {
   FormControl,
   FormLabel,
@@ -22,31 +23,23 @@ import {
   Typography,
   Alert
 } from '@mui/material';
-import { DatePicker, TimePicker } from '@mui/x-date-pickers';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 export interface OutageSectionProps {
   /** Whether this deployment has an outage */
   hasOutage: boolean;
-  /** Outage start date (null if no outage or not set) */
-  outageStartDate: Date | null;
-  /** Outage start time (null if no outage or not set) */
-  outageStartTime: Date | null;
-  /** Outage end date (null if no outage or not set) */
-  outageEndDate: Date | null;
-  /** Outage end time (null if no outage or not set) */
-  outageEndTime: Date | null;
+  /** Outage start date/time (null if no outage or not set) */
+  outageStartDateTime: Date | null;
+  /** Outage end date/time (null if no outage or not set) */
+  outageEndDateTime: Date | null;
   /** Callback when outage indicator changes */
   onHasOutageChange: (hasOutage: boolean) => void;
-  /** Callback when outage start date changes */
-  onOutageStartDateChange: (date: Date | null) => void;
-  /** Callback when outage start time changes */
-  onOutageStartTimeChange: (time: Date | null) => void;
-  /** Callback when outage end date changes */
-  onOutageEndDateChange: (date: Date | null) => void;
-  /** Callback when outage end time changes */
-  onOutageEndTimeChange: (time: Date | null) => void;
+  /** Callback when outage start date/time changes */
+  onOutageStartDateTimeChange: (dateTime: Date | null) => void;
+  /** Callback when outage end date/time changes */
+  onOutageEndDateTimeChange: (dateTime: Date | null) => void;
   /** Validation error message (if any) */
   error?: string;
 }
@@ -55,20 +48,19 @@ export interface OutageSectionProps {
  * OutageSection component
  * 
  * Displays a Yes/No radio button for outage indicator.
- * When Yes is selected, displays 4 date/time pickers for outage start and end.
+ * When Yes is selected, displays 2 DateTimePickers for outage start and end.
  * Automatically clears outage values when switching from Yes to No.
+ * 
+ * Performance optimization:
+ * - Wrapped with React.memo to prevent re-renders when parent changes (22.2)
  */
-export function OutageSection({
+function OutageSectionComponent({
   hasOutage,
-  outageStartDate,
-  outageStartTime,
-  outageEndDate,
-  outageEndTime,
+  outageStartDateTime,
+  outageEndDateTime,
   onHasOutageChange,
-  onOutageStartDateChange,
-  onOutageStartTimeChange,
-  onOutageEndDateChange,
-  onOutageEndTimeChange,
+  onOutageStartDateTimeChange,
+  onOutageEndDateTimeChange,
   error
 }: OutageSectionProps) {
   
@@ -78,10 +70,8 @@ export function OutageSection({
     
     if (!newHasOutage) {
       // Clear all outage values when switching to No
-      onOutageStartDateChange(null);
-      onOutageStartTimeChange(null);
-      onOutageEndDateChange(null);
-      onOutageEndTimeChange(null);
+      onOutageStartDateTimeChange(null);
+      onOutageEndDateTimeChange(null);
     }
     
     onHasOutageChange(newHasOutage);
@@ -129,96 +119,53 @@ export function OutageSection({
               Outage Window
             </Typography>
             
-            {/* Outage Start Date and Time */}
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <Box sx={{ flex: '1 1 250px', minWidth: '200px' }}>
-                <DatePicker
-                  label="Outage Start Date *"
-                  value={outageStartDate}
-                  onChange={onOutageStartDateChange}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      required: true
-                    },
-                    field: {
-                      'aria-label': 'Outage start date',
-                      'aria-describedby': 'outage-start-date-help'
-                    }
-                  }}
-                />
-                <span id="outage-start-date-help" className="sr-only">
-                  Select the date when the outage will start. Use the date picker to choose a date.
-                </span>
-              </Box>
-              <Box sx={{ flex: '1 1 250px', minWidth: '200px' }}>
-                <TimePicker
-                  label="Outage Start Time *"
-                  value={outageStartTime}
-                  onChange={onOutageStartTimeChange}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      required: true
-                    },
-                    field: {
-                      'aria-label': 'Outage start time',
-                      'aria-describedby': 'outage-start-time-help'
-                    }
-                  }}
-                />
-                <span id="outage-start-time-help" className="sr-only">
-                  Select the time when the outage will start. Use the time picker to choose a time.
-                </span>
-              </Box>
-            </Box>
+            {/* Outage Start DateTimePicker */}
+            <DateTimePicker
+              label="Outage Start *"
+              value={outageStartDateTime}
+              onChange={onOutageStartDateTimeChange}
+              ampm={false}
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  required: true
+                },
+                field: {
+                  'aria-label': 'Outage start date and time',
+                  'aria-describedby': 'outage-start-help'
+                }
+              }}
+            />
+            <span id="outage-start-help" className="sr-only">
+              Select the date and time when the outage will start.
+            </span>
             
-            {/* Outage End Date and Time */}
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <Box sx={{ flex: '1 1 250px', minWidth: '200px' }}>
-                <DatePicker
-                  label="Outage End Date *"
-                  value={outageEndDate}
-                  onChange={onOutageEndDateChange}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      required: true
-                    },
-                    field: {
-                      'aria-label': 'Outage end date',
-                      'aria-describedby': 'outage-end-date-help'
-                    }
-                  }}
-                />
-                <span id="outage-end-date-help" className="sr-only">
-                  Select the date when the outage will end. Use the date picker to choose a date.
-                </span>
-              </Box>
-              <Box sx={{ flex: '1 1 250px', minWidth: '200px' }}>
-                <TimePicker
-                  label="Outage End Time *"
-                  value={outageEndTime}
-                  onChange={onOutageEndTimeChange}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      required: true
-                    },
-                    field: {
-                      'aria-label': 'Outage end time',
-                      'aria-describedby': 'outage-end-time-help'
-                    }
-                  }}
-                />
-                <span id="outage-end-time-help" className="sr-only">
-                  Select the time when the outage will end. Must be later than outage start. Use the time picker to choose a time.
-                </span>
-              </Box>
-            </Box>
+            {/* Outage End DateTimePicker */}
+            <DateTimePicker
+              label="Outage End *"
+              value={outageEndDateTime}
+              onChange={onOutageEndDateTimeChange}
+              ampm={false}
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  required: true
+                },
+                field: {
+                  'aria-label': 'Outage end date and time',
+                  'aria-describedby': 'outage-end-help'
+                }
+              }}
+            />
+            <span id="outage-end-help" className="sr-only">
+              Select the date and time when the outage will end. Must be later than outage start.
+            </span>
           </Box>
         )}
       </Box>
     </LocalizationProvider>
   );
 }
+
+// Wrap component with React.memo to prevent re-renders (22.2: Performance optimization)
+export const OutageSection = React.memo(OutageSectionComponent);

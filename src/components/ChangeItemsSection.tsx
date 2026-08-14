@@ -3,6 +3,11 @@
  * 
  * Section for managing Change_Item entries (Jira change items).
  * 
+ * Performance optimizations:
+ * - Extracted ChangeItemRow component and wrapped with React.memo (22.2)
+ * - Parent component wrapped with React.memo to prevent re-renders (22.2)
+ * - Callbacks memoized with useCallback (22.2: Performance optimization)
+ * 
  * Requirements:
  * - 6.1: Allow 1-999 Change_Item entries
  * - 6.2: Each item requires non-empty Jira Number (1-50 chars) and Description (1-500 chars)
@@ -13,7 +18,7 @@
  * - 6.7: Display Jira Number in <strong> followed by Description
  */
 
-import React from 'react';
+import { useCallback, memo } from 'react';
 import {
   Box,
   Typography,
@@ -27,6 +32,110 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { ChangeItem } from '../types/models';
+
+/**
+ * Props for individual change item row
+ */
+interface ChangeItemRowProps {
+  item: ChangeItem;
+  index: number;
+  isAtMinimum: boolean;
+  errors?: { jiraNumber?: string; description?: string };
+  onItemChange: (id: string, field: 'jiraNumber' | 'description', value: string) => void;
+  onRemoveItem: (id: string) => void;
+}
+
+/**
+ * ChangeItemRow - Individual row component for a single change item
+ * Memoized with React.memo to prevent re-renders of other rows (22.2: Performance)
+ */
+const ChangeItemRow = memo<ChangeItemRowProps>(({
+  item,
+  index,
+  isAtMinimum,
+  errors = {},
+  onItemChange,
+  onRemoveItem
+}) => (
+  <Paper
+    elevation={1}
+    sx={{
+      p: 2,
+      border: (errors.jiraNumber || errors.description) 
+        ? '1px solid' 
+        : 'none',
+      borderColor: 'error.main'
+    }}
+    component="article"
+    aria-labelledby={`change-item-${index}-heading`}
+  >
+    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+      <Box sx={{ flex: 1 }}>
+        <Typography 
+          variant="subtitle2" 
+          sx={{ mb: 1, fontWeight: 'bold' }}
+          id={`change-item-${index}-heading`}
+        >
+          Change Item {index + 1}
+        </Typography>
+        
+        {/* Jira Number Input - Requirement: 6.2, 6.3 */}
+        <TextField
+          fullWidth
+          required
+          label="Jira Number"
+          value={item.jiraNumber}
+          onChange={(e) => onItemChange(item.id, 'jiraNumber', e.target.value)}
+          error={!!errors.jiraNumber}
+          helperText={errors.jiraNumber || 'Max 50 characters'}
+          slotProps={{
+            htmlInput: {
+              maxLength: 50,
+              'aria-label': `Jira number for change item ${index + 1}`,
+              'aria-describedby': errors.jiraNumber ? `change-item-${index}-jira-error` : `change-item-${index}-jira-help`,
+              'aria-invalid': !!errors.jiraNumber
+            }
+          }}
+          sx={{ mb: 2 }}
+        />
+        
+        {/* Description Textarea - Requirement: 6.2, 6.3 */}
+        <TextField
+          fullWidth
+          required
+          multiline
+          rows={3}
+          label="Description"
+          value={item.description}
+          onChange={(e) => onItemChange(item.id, 'description', e.target.value)}
+          error={!!errors.description}
+          helperText={errors.description || 'Max 500 characters'}
+          slotProps={{
+            htmlInput: {
+              maxLength: 500,
+              'aria-label': `Description for change item ${index + 1}`,
+              'aria-describedby': errors.description ? `change-item-${index}-desc-error` : `change-item-${index}-desc-help`,
+              'aria-invalid': !!errors.description
+            }
+          }}
+        />
+      </Box>
+      
+      {/* Remove Button - Requirements: 6.4, 6.5 */}
+      <IconButton
+        aria-label={`Remove change item ${index + 1}`}
+        onClick={() => onRemoveItem(item.id)}
+        disabled={isAtMinimum}
+        color="error"
+        title={isAtMinimum ? 'At least one change item is required' : undefined}
+      >
+        <DeleteIcon />
+      </IconButton>
+    </Box>
+  </Paper>
+));
+
+ChangeItemRow.displayName = 'ChangeItemRow';
 
 export interface ChangeItemsSectionProps {
   /** Array of change items (1-999 items) */
@@ -44,18 +153,21 @@ export interface ChangeItemsSectionProps {
  * 
  * Displays a list of Change_Item entries with Add/Remove controls.
  * Each item has text input for Jira Number and textarea for Description.
+ * 
+ * Performance: Memoized with React.memo and uses useCallback for handlers (22.2)
  */
-export const ChangeItemsSection: React.FC<ChangeItemsSectionProps> = ({
+function ChangeItemsSectionComponent({
   changeItems,
   onChange,
   errors = {},
   sectionError
-}) => {
+}: ChangeItemsSectionProps) {
   /**
    * Add a new change item (max 999)
    * Requirement: 6.1
+   * Memoized with useCallback (22.2: Performance optimization)
    */
-  const handleAddItem = () => {
+  const handleAddItem = useCallback(() => {
     if (changeItems.length >= 999) {
       return; // Already at maximum
     }
@@ -67,31 +179,33 @@ export const ChangeItemsSection: React.FC<ChangeItemsSectionProps> = ({
     };
     
     onChange([...changeItems, newItem]);
-  };
+  }, [changeItems.length, onChange]);
 
   /**
    * Remove a change item by id (min 1 required)
    * Requirements: 6.4, 6.5, 6.6
+   * Memoized with useCallback (22.2: Performance optimization)
    */
-  const handleRemoveItem = (id: string) => {
+  const handleRemoveItem = useCallback((id: string) => {
     if (changeItems.length <= 1) {
       return; // Must keep at least one item
     }
     
     onChange(changeItems.filter(item => item.id !== id));
-  };
+  }, [changeItems.length, onChange]);
 
   /**
    * Update a specific change item field
    * Requirement: 6.2
+   * Memoized with useCallback (22.2: Performance optimization)
    */
-  const handleItemChange = (id: string, field: 'jiraNumber' | 'description', value: string) => {
+  const handleItemChange = useCallback((id: string, field: 'jiraNumber' | 'description', value: string) => {
     onChange(
       changeItems.map(item =>
         item.id === id ? { ...item, [field]: value } : item
       )
     );
-  };
+  }, [changeItems, onChange]);
 
   // Check if at maximum items (disable Add button)
   const isAtMaximum = changeItems.length >= 999;
@@ -126,82 +240,15 @@ export const ChangeItemsSection: React.FC<ChangeItemsSectionProps> = ({
           const itemErrors = errors[item.id] || {};
           
           return (
-            <Paper
+            <ChangeItemRow
               key={item.id}
-              elevation={1}
-              sx={{
-                p: 2,
-                border: (itemErrors.jiraNumber || itemErrors.description) 
-                  ? '1px solid' 
-                  : 'none',
-                borderColor: 'error.main'
-              }}
-              component="article"
-              aria-labelledby={`change-item-${index}-heading`}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                <Box sx={{ flex: 1 }}>
-                  <Typography 
-                    variant="subtitle2" 
-                    sx={{ mb: 1, fontWeight: 'bold' }}
-                    id={`change-item-${index}-heading`}
-                  >
-                    Change Item {index + 1}
-                  </Typography>
-                  
-                  {/* Jira Number Input - Requirement: 6.2, 6.3 */}
-                  <TextField
-                    fullWidth
-                    required
-                    label="Jira Number"
-                    value={item.jiraNumber}
-                    onChange={(e) => handleItemChange(item.id, 'jiraNumber', e.target.value)}
-                    error={!!itemErrors.jiraNumber}
-                    helperText={itemErrors.jiraNumber}
-                    slotProps={{
-                      htmlInput: {
-                        maxLength: 50,
-                        'aria-label': `Jira number for change item ${index + 1}`,
-                        'aria-describedby': itemErrors.jiraNumber ? `change-item-${index}-jira-error` : `change-item-${index}-jira-help`,
-                        'aria-invalid': !!itemErrors.jiraNumber
-                      }
-                    }}
-                    sx={{ mb: 2 }}
-                  />
-                  
-                  {/* Description Textarea - Requirement: 6.2, 6.3 */}
-                  <TextField
-                    fullWidth
-                    required
-                    multiline
-                    rows={3}
-                    label="Description"
-                    value={item.description}
-                    onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
-                    error={!!itemErrors.description}
-                    helperText={itemErrors.description}
-                    slotProps={{
-                      htmlInput: {
-                        maxLength: 500,
-                        'aria-label': `Description for change item ${index + 1}`,
-                        'aria-describedby': itemErrors.description ? `change-item-${index}-desc-error` : `change-item-${index}-desc-help`,
-                        'aria-invalid': !!itemErrors.description
-                      }
-                    }}
-                  />
-                </Box>
-                
-                {/* Remove Button - Requirements: 6.4, 6.5 */}
-                <IconButton
-                  aria-label={isAtMinimum ? 'Cannot remove - at least one change item required' : `Remove change item ${index + 1}`}
-                  onClick={() => handleRemoveItem(item.id)}
-                  disabled={isAtMinimum}
-                  color="error"
-                >
-                  <DeleteIcon />
-                </IconButton>
-              </Box>
-            </Paper>
+              item={item}
+              index={index}
+              isAtMinimum={isAtMinimum}
+              errors={itemErrors}
+              onItemChange={handleItemChange}
+              onRemoveItem={handleRemoveItem}
+            />
           );
         })}
       </Stack>
@@ -214,8 +261,6 @@ export const ChangeItemsSection: React.FC<ChangeItemsSectionProps> = ({
         disabled={isAtMaximum}
         sx={{ mt: 2 }}
         fullWidth
-        aria-label={isAtMaximum ? 'Cannot add more - maximum 999 items reached' : 'Add another change item'}
-        aria-describedby={isAtMaximum ? 'change-items-max-message' : undefined}
       >
         {isAtMaximum ? 'Maximum 999 items reached' : 'Add Change Item'}
       </Button>
@@ -232,4 +277,7 @@ export const ChangeItemsSection: React.FC<ChangeItemsSectionProps> = ({
       )}
     </Box>
   );
-};
+}
+
+// Wrap component with React.memo to prevent re-renders (22.2: Performance optimization)
+export const ChangeItemsSection = memo(ChangeItemsSectionComponent);

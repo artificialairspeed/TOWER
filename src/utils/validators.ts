@@ -71,6 +71,65 @@ export function isWithinLength(input: string, maxLength: number): boolean {
 }
 
 // ============================================================================
+// Single-Field Validation (for onBlur immediate feedback)
+// ============================================================================
+
+/**
+ * Validates a single field by name and returns an error message, or undefined if valid.
+ * Only performs format/length validation — does NOT flag required-but-empty fields,
+ * because a user who merely tabs through a field shouldn't see "required" until submit.
+ * 
+ * For fields where the user has typed something and then blurred, this catches
+ * format issues immediately (e.g. bad email format, exceeds max length).
+ */
+export function validateFieldOnBlur(
+  field: string,
+  value: string
+): string | undefined {
+  // Skip validation for empty values — "required" errors only on submit
+  const trimmed = trimInput(value);
+  if (!trimmed) return undefined;
+
+  switch (field) {
+    case 'contactEmail':
+      if (!isWithinLength(value, 255)) {
+        return 'Email must not exceed 255 characters';
+      }
+      if (!isValidEmail(trimmed)) {
+        return 'Please enter a valid email address (example@domain.com)';
+      }
+      return undefined;
+
+    case 'contactPhone':
+      if (!isWithinLength(value, 255)) {
+        return 'Phone must not exceed 255 characters';
+      }
+      return undefined;
+
+    case 'contactName':
+      if (!isWithinLength(value, 255)) {
+        return 'Contact Name must not exceed 255 characters';
+      }
+      return undefined;
+
+    case 'changeNumber':
+      if (!isWithinLength(value, 20)) {
+        return 'Change Number must not exceed 20 characters';
+      }
+      return undefined;
+
+    case 'releaseVersion':
+      if (!isWithinLength(value, 50)) {
+        return 'Release Version must not exceed 50 characters';
+      }
+      return undefined;
+
+    default:
+      return undefined;
+  }
+}
+
+// ============================================================================
 // Form-Level Validation
 // ============================================================================
 
@@ -144,42 +203,30 @@ export function validateForm(data: DeploymentFormData): ValidationResult {
   }
 
   // ===== Schedule (Requirements 4.6, 4.7) =====
-  if (!data.deploymentDate) {
+  if (!data.startDateTime) {
     errors.push({
       formId: data.formId,
-      field: 'deploymentDate',
-      message: 'Deployment Date is required'
+      field: 'startDateTime',
+      message: 'Deployment Start is required'
     });
   }
 
-  if (!data.startTime) {
+  if (!data.endDateTime) {
     errors.push({
       formId: data.formId,
-      field: 'startTime',
-      message: 'Start Time is required'
+      field: 'endDateTime',
+      message: 'Deployment End is required'
     });
   }
 
-  if (!data.endTime) {
-    errors.push({
-      formId: data.formId,
-      field: 'endTime',
-      message: 'End Time is required'
-    });
-  }
-
-  // Validate time ordering: End Time must be later than Start Time
+  // Validate time ordering: End must be later than Start
   // Requirements 4.6
-  if (data.startTime && data.endTime && data.deploymentDate) {
-    // Combine date and time for accurate comparison
-    const startDateTime = combineDateAndTime(data.deploymentDate, data.startTime);
-    const endDateTime = combineDateAndTime(data.deploymentDate, data.endTime);
-    
-    if (endDateTime <= startDateTime) {
+  if (data.startDateTime && data.endDateTime) {
+    if (data.endDateTime <= data.startDateTime) {
       errors.push({
         formId: data.formId,
-        field: 'endTime',
-        message: 'End Time must be later than Start Time'
+        field: 'endDateTime',
+        message: 'Deployment End must be later than Deployment Start'
       });
     }
   }
@@ -187,47 +234,28 @@ export function validateForm(data: DeploymentFormData): ValidationResult {
   // ===== Outage Information (Requirement 5.6) =====
   if (data.hasOutage) {
     // Outage date/time fields are required when outage indicator is Yes
-    if (!data.outageStartDate) {
+    if (!data.outageStartDateTime) {
       errors.push({
         formId: data.formId,
-        field: 'outageStartDate',
-        message: 'Outage Start Date is required when outage is indicated'
+        field: 'outageStartDateTime',
+        message: 'Outage Start is required when outage is indicated'
       });
     }
 
-    if (!data.outageStartTime) {
+    if (!data.outageEndDateTime) {
       errors.push({
         formId: data.formId,
-        field: 'outageStartTime',
-        message: 'Outage Start Time is required when outage is indicated'
-      });
-    }
-
-    if (!data.outageEndDate) {
-      errors.push({
-        formId: data.formId,
-        field: 'outageEndDate',
-        message: 'Outage End Date is required when outage is indicated'
-      });
-    }
-
-    if (!data.outageEndTime) {
-      errors.push({
-        formId: data.formId,
-        field: 'outageEndTime',
-        message: 'Outage End Time is required when outage is indicated'
+        field: 'outageEndDateTime',
+        message: 'Outage End is required when outage is indicated'
       });
     }
 
     // Validate outage time ordering: Outage End must be later than Outage Start
-    if (data.outageStartDate && data.outageStartTime && data.outageEndDate && data.outageEndTime) {
-      const outageStart = combineDateAndTime(data.outageStartDate, data.outageStartTime);
-      const outageEnd = combineDateAndTime(data.outageEndDate, data.outageEndTime);
-      
-      if (outageEnd <= outageStart) {
+    if (data.outageStartDateTime && data.outageEndDateTime) {
+      if (data.outageEndDateTime <= data.outageStartDateTime) {
         errors.push({
           formId: data.formId,
-          field: 'outageEndTime',
+          field: 'outageEndDateTime',
           message: 'Outage End must be later than Outage Start'
         });
       }
@@ -368,23 +396,6 @@ export function validateForm(data: DeploymentFormData): ValidationResult {
     isValid: errors.length === 0,
     errors
   };
-}
-
-/**
- * Helper function to combine a date and time into a single Date object for comparison.
- * Takes the date portion from dateValue and the time portion from timeValue.
- * 
- * @param dateValue - Date object containing the date portion
- * @param timeValue - Date object containing the time portion
- * @returns Combined Date object
- */
-function combineDateAndTime(dateValue: Date, timeValue: Date): Date {
-  const combined = new Date(dateValue);
-  combined.setHours(timeValue.getHours());
-  combined.setMinutes(timeValue.getMinutes());
-  combined.setSeconds(timeValue.getSeconds());
-  combined.setMilliseconds(timeValue.getMilliseconds());
-  return combined;
 }
 
 // ============================================================================

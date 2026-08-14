@@ -47,6 +47,8 @@ export interface DeploymentQueueRowProps {
   validationErrors?: ValidationError[];
   /** Callback to clear validation error for a specific field */
   onClearFieldError?: (field: string) => void;
+  /** Callback for onBlur field validation (field, value) */
+  onBlurValidate?: (field: string, value: string) => void;
   /**
    * When true, the row expands on mount / when this becomes the newest row,
    * and scrolls itself into view. Used to auto-open freshly added forms.
@@ -63,8 +65,11 @@ export interface DeploymentQueueRowProps {
  * - Auto-expands (and scrolls into view) when it is the newest form
  * - Expands to show full DeploymentForm component
  * - Visual indicators for validation errors
+ * 
+ * Performance optimization:
+ * - Wrapped with React.memo to prevent re-renders when parent changes (22.2)
  */
-export const DeploymentQueueRow: React.FC<DeploymentQueueRowProps> = ({
+function DeploymentQueueRowComponent({
   formData,
   position,
   onUpdate,
@@ -73,8 +78,9 @@ export const DeploymentQueueRow: React.FC<DeploymentQueueRowProps> = ({
   canRemove,
   validationErrors = [],
   onClearFieldError,
+  onBlurValidate,
   defaultExpanded = false,
-}) => {
+}: DeploymentQueueRowProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const hasErrors = validationErrors.length > 0;
   const rootRef = useRef<HTMLDivElement>(null);
@@ -103,8 +109,8 @@ export const DeploymentQueueRow: React.FC<DeploymentQueueRowProps> = ({
   }, [hasErrors]);
 
   // Format date for display
-  const formattedDate = formData.deploymentDate
-    ? format(formData.deploymentDate, 'MMM dd, yyyy')
+  const formattedDate = formData.startDateTime
+    ? format(formData.startDateTime, 'MMM dd, yyyy')
     : 'Not set';
 
   // Get application name
@@ -129,6 +135,7 @@ export const DeploymentQueueRow: React.FC<DeploymentQueueRowProps> = ({
           : 'transparent',
         transition: 'all 0.2s ease-in-out',
       }}
+      data-testid={`form-${position - 1}`}
     >
       {/* Summary Row */}
       <Box
@@ -277,9 +284,13 @@ export const DeploymentQueueRow: React.FC<DeploymentQueueRowProps> = ({
             canRemove={canRemove}
             validationErrors={validationErrors}
             onClearFieldError={onClearFieldError}
+            onBlurValidate={onBlurValidate}
           />
         </Box>
       </Collapse>
     </Paper>
   );
-};
+}
+
+// Wrap component with React.memo to prevent re-renders (22.2: Performance optimization)
+export const DeploymentQueueRow = React.memo(DeploymentQueueRowComponent);

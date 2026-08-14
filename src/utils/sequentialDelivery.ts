@@ -82,13 +82,12 @@ export async function deliverArtifacts(
 }
 
 /**
- * Delivers the single artifact for a bundle: renders the notification to a PNG,
- * downloads it automatically, and opens it in a new browser tab.
+ * Delivers the single artifact for a bundle: renders the notification to a PNG
+ * and opens it in a new browser tab for viewing.
  *
- * The download is the guaranteed deliverable (it is not subject to popup
- * blocking), so as long as the image renders the artifact counts as delivered.
- * If the new tab is blocked, the block is recorded for informational purposes
- * but the artifact is still considered successful (Requirement 13.3).
+ * The PNG is displayed in the new tab without downloading. If the new tab is
+ * blocked, the block is recorded but the artifact is still considered successful
+ * since the image was rendered (Requirement 13.3).
  * If rendering fails, the artifact is recorded as failed and delivery continues
  * with the remaining forms (Requirement 13.4).
  *
@@ -102,12 +101,11 @@ async function deliverPNG(
   try {
     const opened = await openAndDownloadPNG(bundle.htmlContent, bundle.fileName);
 
-    // The file downloaded successfully regardless of whether the tab opened.
+    // The PNG rendered successfully.
     result.successful++;
 
     if (!opened) {
-      // Requirement 13.3: Note that the preview tab was blocked; the file was
-      // still downloaded, so this is informational rather than a failure.
+      // Requirement 13.3: Note that the tab was blocked, but rendering succeeded.
       result.popupBlocked = true;
     }
   } catch (error) {

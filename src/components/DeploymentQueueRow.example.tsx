@@ -39,7 +39,7 @@ function WithApplicationExample() {
     environment: 'PROD',
     changeNumber: 'CHG12345',
     releaseVersion: 'v1.2.3',
-    deploymentDate: new Date('2024-12-25')
+    startDateTime: new Date('2024-12-25')
   };
   
   return (
@@ -92,7 +92,7 @@ function MultipleRowsExample() {
       application: APPLICATION_CATALOG[0],
       environment: 'PROD',
       changeNumber: 'CHG12345',
-      deploymentDate: new Date('2024-12-25')
+      startDateTime: new Date('2024-12-25')
     },
     {
       ...createDefaultForm(),
@@ -100,13 +100,13 @@ function MultipleRowsExample() {
       application: APPLICATION_CATALOG[1],
       environment: 'QA',
       changeNumber: 'CHG12346',
-      deploymentDate: new Date('2024-12-26')
+      startDateTime: new Date('2024-12-26')
     },
     {
       ...createDefaultForm(),
       formId: 'form-3',
       // No application selected
-      deploymentDate: new Date('2024-12-27')
+      startDateTime: new Date('2024-12-27')
     }
   ];
   
@@ -139,7 +139,7 @@ function MixedStateExample() {
       application: APPLICATION_CATALOG[0],
       environment: 'PROD' as const,
       changeNumber: 'CHG12345',
-      deploymentDate: new Date('2024-12-25')
+      startDateTime: new Date('2024-12-25')
     },
     {
       ...createDefaultForm(),
@@ -147,7 +147,7 @@ function MixedStateExample() {
       application: APPLICATION_CATALOG[1],
       environment: 'QA' as const,
       changeNumber: '', // Missing - will have error
-      deploymentDate: new Date('2024-12-26')
+      startDateTime: new Date('2024-12-26')
     },
     {
       ...createDefaultForm(),
@@ -155,7 +155,7 @@ function MixedStateExample() {
       application: APPLICATION_CATALOG[2],
       environment: 'DEV' as const,
       changeNumber: 'CHG12347',
-      deploymentDate: new Date('2024-12-27')
+      startDateTime: new Date('2024-12-27')
     }
   ];
   

@@ -242,7 +242,7 @@ Implementation language: **TypeScript** with React 18, Material UI v5, html2pdf.
     - Show empty when any required component missing
     - _Requirements: 3.6, 3.7, 3.8_
 
-  - [-] 9.4 Write component tests for deployment info
+  - [x] 9.4 Write component tests for deployment info
     - Test Change Number/Release Version auto-trim on blur
     - Test required field validation errors displayed
     - Test title updates within 500ms (use fake timers)
@@ -266,7 +266,7 @@ Implementation language: **TypeScript** with React 18, Material UI v5, html2pdf.
     - Show validation error when outage end <= outage start
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6_
 
-  - [-] 10.3 Write component tests for schedule and outage
+  - [x] 10.3 Write component tests for schedule and outage
     - Test picker-only input (keyboard input rejected)
     - Test default values set correctly
     - Test validation errors displayed for time ordering
@@ -274,8 +274,8 @@ Implementation language: **TypeScript** with React 18, Material UI v5, html2pdf.
     - Test outage values cleared when switching to No
     - _Requirements: 4.1-4.7, 5.1-5.6_
 
-- [ ] 11. Change Items and Impact Items components (presentation layer)
-  - [-] 11.1 Implement ChangeItemsSection component
+- [x] 11. Change Items and Impact Items components (presentation layer)
+  - [x] 11.1 Implement ChangeItemsSection component
     - Display list of Change_Item entries with Add/Remove controls
     - Each item: text input for Jira Number (max 50 chars), textarea for Description (max 500 chars)
     - Add button creates new item (max 999 total)
@@ -285,7 +285,7 @@ Implementation language: **TypeScript** with React 18, Material UI v5, html2pdf.
     - Show validation errors for empty Jira Number or Description
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7_
 
-  - [-] 11.2 Implement ImpactSection component
+  - [x] 11.2 Implement ImpactSection component
     - Display list of Impact_Item entries with Add/Remove controls
     - Each item: textarea for impact text (max 500 chars)
     - Add button creates new item (max 100 total)
@@ -449,8 +449,8 @@ Implementation language: **TypeScript** with React 18, Material UI v5, html2pdf.
 - [~] 18. Checkpoint - Full generation pipeline complete
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 19. Snapshot testing (presentation layer)
-  - [-] 19.1 Create snapshot tests for all major components
+- [x] 19. Snapshot testing (presentation layer)
+  - [x] 19.1 Create snapshot tests for all major components
     - Snapshot: ApplicationSelector (with/without catalog)
     - Snapshot: DeploymentInfoSection (empty, filled, with errors)
     - Snapshot: ScheduleSection (default, filled, with validation errors)
@@ -463,8 +463,8 @@ Implementation language: **TypeScript** with React 18, Material UI v5, html2pdf.
     - Snapshot: FormManager (1 form, 3 forms, 5 forms)
     - _Requirements: (rendering consistency)_
 
-- [ ] 20. End-to-end testing (complete workflows)
-  - [-] 20.1 E2E: Single deployment flow
+- [x] 20. End-to-end testing (complete workflows)
+  - [x] 20.1 E2E: Single deployment flow
     - Fill all fields in one form with valid data
     - Select theme
     - Click Generate Outputs
@@ -472,7 +472,7 @@ Implementation language: **TypeScript** with React 18, Material UI v5, html2pdf.
     - Verify file names correct format
     - _Requirements: All requirements (happy path)_
 
-  - [-] 20.2 E2E: Multi-deployment flow
+  - [x] 20.2 E2E: Multi-deployment flow
     - Add 3 forms
     - Fill all forms with different data
     - Generate outputs
@@ -481,7 +481,7 @@ Implementation language: **TypeScript** with React 18, Material UI v5, html2pdf.
     - Verify distinct file names (no collisions)
     - _Requirements: 1.1-1.4, 10.1-10.7, 11.1-11.3, 13.1-13.2, 14.1-14.4_
 
-  - [-] 20.3 E2E: Validation flow
+  - [x] 20.3 E2E: Validation flow
     - Leave required fields empty
     - Click Generate Outputs
     - Verify generation blocked
@@ -525,7 +525,7 @@ Implementation language: **TypeScript** with React 18, Material UI v5, html2pdf.
     - Verify error message displayed for failed PDF
     - _Requirements: 10.8, 11.4, 13.3, 13.4_
 
-- [ ] 21. Accessibility and polish
+- [x] 21. Accessibility and polish
   - [x] 21.1 Implement keyboard navigation and ARIA labels
     - Add ARIA labels to all form controls
     - Ensure tab order logical and complete
@@ -548,7 +548,7 @@ Implementation language: **TypeScript** with React 18, Material UI v5, html2pdf.
     - Add success/error toast notifications
     - _Requirements: (user experience polish)_
 
-  - [~] 21.4 Manual accessibility testing
+  - [x] 21.4 Manual accessibility testing
     - Test with screen reader (NVDA, JAWS, or VoiceOver)
     - Test keyboard-only navigation
     - Test with browser zoom (200%, 400%)
@@ -556,22 +556,22 @@ Implementation language: **TypeScript** with React 18, Material UI v5, html2pdf.
     - Document accessibility test results
     - _Requirements: (WCAG 2.1 Level AA validation, XC-005)_
 
-- [ ] 22. Final integration and polish
-  - [~] 22.1 Verify all 14 requirements coverage
+- [x] 22. Final integration and polish
+  - [x] 22.1 Verify all 14 requirements coverage
     - Review each requirement acceptance criterion
     - Verify implementation completeness
     - Run full test suite
     - Fix any remaining issues
     - _Requirements: All requirements 1-14_
 
-  - [~] 22.2 Performance optimization
+  - [x] 22.2 Performance optimization
     - Add memoization for expensive computations (title generation, validation)
     - Optimize re-renders with React.memo where appropriate
     - Lazy load html2pdf.js and html-to-image
     - Profile and optimize large list rendering (100 impact items, 999 change items)
     - _Requirements: (performance optimization)_
 
-  - [~] 22.3 Browser compatibility testing
+  - [x] 22.3 Browser compatibility testing
     - Test on Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
     - Verify date/time pickers work correctly across browsers
     - Verify PDF/PNG generation works across browsers
@@ -579,7 +579,7 @@ Implementation language: **TypeScript** with React 18, Material UI v5, html2pdf.
     - Document any browser-specific issues or limitations
     - _Requirements: (browser compatibility)_
 
-  - [~] 22.4 Create README and developer documentation
+  - [x] 22.4 Create README and developer documentation
     - Document project setup and build commands
     - Document architecture and component structure
     - Document testing approach and test commands

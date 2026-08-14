@@ -50,7 +50,7 @@ export function formatPhoneNumber(phone: string): string {
 /**
  * Generates the deployment title in the required format
  * 
- * Format: [CHG#####] — [Application Name: Release Version - Deploy Product to ENVIRONMENT]
+ * Format: [CHG#####] — [Application Name: Release Version - Deploy to ENVIRONMENT]
  * 
  * Returns an empty string if any required component is missing:
  * - Application
@@ -71,7 +71,7 @@ export function formatPhoneNumber(phone: string): string {
  *   environment: 'PROD',
  *   ...
  * })
- * // Returns: "[CHG12345] — [Crew Portal: v5.4.1 - Deploy Product to PROD]"
+ * // Returns: "[CHG12345] — [Crew Portal: v5.4.1 - Deploy to PROD]"
  */
 export function generateDeploymentTitle(data: DeploymentFormData): string {
   // Check if all required components are present
@@ -83,7 +83,7 @@ export function generateDeploymentTitle(data: DeploymentFormData): string {
   const applicationName = data.application.name;
   
   // Build the title in the required format
-  return `[${data.changeNumber}] — [${applicationName}: ${data.releaseVersion} - Deploy Product to ${data.environment}]`;
+  return `[${data.changeNumber}] — [${applicationName}: ${data.releaseVersion} - Deploy to ${data.environment}]`;
 }
 
 /**
@@ -114,43 +114,54 @@ export function generateNotificationHeader(applicationName: string): string {
  * Format: Month DD, YYYY, HH:MM AM/PM–HH:MM AM/PM
  * Example: "March 05, 2025, 08:00 PM–10:00 PM"
  * 
+ * If start and end are on the same date, shows one date with time range.
+ * If they span different dates, shows full date+time for both.
+ * 
  * Uses Intl.DateTimeFormat API for locale-aware date formatting.
  * 
  * Requirements: 4.5
  * 
- * @param date - The deployment date
- * @param startTime - The start time
- * @param endTime - The end time
+ * @param startDateTime - The deployment start date/time
+ * @param endDateTime - The deployment end date/time
  * @returns The formatted schedule string
  * 
  * @example
  * formatSchedule(
- *   new Date('2025-03-05'),
  *   new Date('2025-03-05T20:00:00'),
  *   new Date('2025-03-05T22:00:00')
  * )
  * // Returns: "March 05, 2025, 08:00 PM–10:00 PM"
  */
-export function formatSchedule(date: Date, startTime: Date, endTime: Date): string {
-  // Format the date part: "Month DD, YYYY"
+export function formatSchedule(startDateTime: Date, endDateTime: Date): string {
   const dateFormatter = new Intl.DateTimeFormat('en-US', {
     month: 'long',
     day: '2-digit',
     year: 'numeric'
   });
-  const datePart = dateFormatter.format(date);
-  
-  // Format the time parts: "HH:MM AM/PM"
   const timeFormatter = new Intl.DateTimeFormat('en-US', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true
   });
-  const startTimePart = timeFormatter.format(startTime);
-  const endTimePart = timeFormatter.format(endTime);
-  
-  // Combine: "Month DD, YYYY, HH:MM AM/PM–HH:MM AM/PM"
-  return `${datePart}, ${startTimePart}–${endTimePart}`;
+
+  const startDatePart = dateFormatter.format(startDateTime);
+  const startTimePart = timeFormatter.format(startDateTime);
+  const endTimePart = timeFormatter.format(endDateTime);
+
+  // Check if same date
+  const sameDate =
+    startDateTime.getFullYear() === endDateTime.getFullYear() &&
+    startDateTime.getMonth() === endDateTime.getMonth() &&
+    startDateTime.getDate() === endDateTime.getDate();
+
+  if (sameDate) {
+    // Same date: "Month DD, YYYY, HH:MM AM/PM–HH:MM AM/PM"
+    return `${startDatePart}, ${startTimePart}–${endTimePart}`;
+  }
+
+  // Different dates: "Month DD, YYYY, HH:MM AM/PM–Month DD, YYYY, HH:MM AM/PM"
+  const endDatePart = dateFormatter.format(endDateTime);
+  return `${startDatePart}, ${startTimePart}–${endDatePart}, ${endTimePart}`;
 }
 
 /**
@@ -220,9 +231,9 @@ export function escapeHtml(text: string): string {
  * Renders a list of Change Items as HTML
  * 
  * Each item is formatted as:
- * <strong>{escapedJiraNumber}</strong> {escapedDescription}
+ * <div><strong>{escapedJiraNumber}</strong> {escapedDescription}</div>
  * 
- * Items are separated by newlines for readability in the HTML template.
+ * Each item is wrapped in a <div> to ensure they appear on separate lines.
  * All user text (Jira Number and Description) is HTML-escaped before rendering.
  * 
  * Requirements: 6.7
@@ -236,16 +247,16 @@ export function escapeHtml(text: string): string {
  *   { id: '2', jiraNumber: 'JIRA-456', description: 'Add new feature' }
  * ])
  * // Returns:
- * // "<strong>JIRA-123</strong> Fix login bug\n<strong>JIRA-456</strong> Add new feature"
+ * // "<div><strong>JIRA-123</strong> Fix login bug</div><div><strong>JIRA-456</strong> Add new feature</div>"
  */
 export function renderChangeItems(items: ChangeItem[]): string {
   return items
     .map(item => {
       const escapedJiraNumber = escapeHtml(item.jiraNumber);
       const escapedDescription = escapeHtml(item.description);
-      return `<strong>${escapedJiraNumber}</strong> ${escapedDescription}`;
+      return `<div><strong>${escapedJiraNumber}</strong> ${escapedDescription}</div>`;
     })
-    .join('\n');
+    .join('');
 }
 
 /**
@@ -284,7 +295,7 @@ export function renderImpactItems(items: ImpactItem[]): string {
  * Renders the outage section for the deployment notification
  * 
  * If hasOutage is false, returns an empty string.
- * If hasOutage is true, formats the outage window using the same format as deployment schedule.
+ * If hasOutage is true, formats the outage window as a date/time range.
  * 
  * Format when outage exists:
  * "Outage Window: Month DD, YYYY, HH:MM AM/PM–Month DD, YYYY, HH:MM AM/PM"
@@ -295,31 +306,25 @@ export function renderImpactItems(items: ImpactItem[]): string {
  * Requirements: 7.8 (outage rendering)
  * 
  * @param hasOutage - Whether the deployment includes an outage
- * @param outageStartDate - Start date of the outage (required if hasOutage is true)
- * @param outageStartTime - Start time of the outage (required if hasOutage is true)
- * @param outageEndDate - End date of the outage (required if hasOutage is true)
- * @param outageEndTime - End time of the outage (required if hasOutage is true)
+ * @param outageStartDateTime - Start date/time of the outage (required if hasOutage is true)
+ * @param outageEndDateTime - End date/time of the outage (required if hasOutage is true)
  * @returns HTML string for the outage section, or empty string if no outage
  * 
  * @example
  * renderOutageSection(
  *   true,
- *   new Date('2025-03-05'),
  *   new Date('2025-03-05T20:00:00'),
- *   new Date('2025-03-05'),
  *   new Date('2025-03-05T22:00:00')
  * )
  * // Returns: "Outage Window: March 05, 2025, 08:00 PM–March 05, 2025, 10:00 PM"
  * 
- * renderOutageSection(false, null, null, null, null)
+ * renderOutageSection(false, null, null)
  * // Returns: ""
  */
 export function renderOutageSection(
   hasOutage: boolean,
-  outageStartDate: Date | null,
-  outageStartTime: Date | null,
-  outageEndDate: Date | null,
-  outageEndTime: Date | null
+  outageStartDateTime: Date | null,
+  outageEndDateTime: Date | null
 ): string {
   if (!hasOutage) {
     return '';
@@ -327,39 +332,27 @@ export function renderOutageSection(
   
   // If outage is indicated but dates/times are missing, return empty
   // (validation should catch this, but we handle gracefully)
-  if (!outageStartDate || !outageStartTime || !outageEndDate || !outageEndTime) {
+  if (!outageStartDateTime || !outageEndDateTime) {
     return '';
   }
   
   // Format start date and time
-  const startDateFormatter = new Intl.DateTimeFormat('en-US', {
+  const dateFormatter = new Intl.DateTimeFormat('en-US', {
     month: 'long',
     day: '2-digit',
     year: 'numeric'
   });
-  const startTimeFormatter = new Intl.DateTimeFormat('en-US', {
+  const timeFormatter = new Intl.DateTimeFormat('en-US', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true
   });
   
-  const startDatePart = startDateFormatter.format(outageStartDate);
-  const startTimePart = startTimeFormatter.format(outageStartTime);
+  const startDatePart = dateFormatter.format(outageStartDateTime);
+  const startTimePart = timeFormatter.format(outageStartDateTime);
   
-  // Format end date and time
-  const endDateFormatter = new Intl.DateTimeFormat('en-US', {
-    month: 'long',
-    day: '2-digit',
-    year: 'numeric'
-  });
-  const endTimeFormatter = new Intl.DateTimeFormat('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  });
-  
-  const endDatePart = endDateFormatter.format(outageEndDate);
-  const endTimePart = endTimeFormatter.format(outageEndTime);
+  const endDatePart = dateFormatter.format(outageEndDateTime);
+  const endTimePart = timeFormatter.format(outageEndDateTime);
   
   // Combine into outage window format
   const outageWindow = `Outage Window: ${startDatePart}, ${startTimePart}–${endDatePart}, ${endTimePart}`;
@@ -411,7 +404,7 @@ export function renderOutageSection(
  *   // ... other fields
  * };
  * const result = injectTemplate(template, data);
- * // Returns: '<h1>Crew Portal Deployment</h1><p>[CHG12345] — [Crew Portal: v5.4.1 - Deploy Product to PROD]</p>'
+ * // Returns: '<h1>Crew Portal Deployment</h1><p>[CHG12345] — [Crew Portal: v5.4.1 - Deploy to PROD]</p>'
  */
 export function injectTemplate(template: string, data: DeploymentFormData): string {
   // Generate notification header
@@ -424,18 +417,15 @@ export function injectTemplate(template: string, data: DeploymentFormData): stri
   
   // Format deployment schedule
   const deploymentSchedule = formatSchedule(
-    data.deploymentDate,
-    data.startTime,
-    data.endTime
+    data.startDateTime,
+    data.endDateTime
   );
   
   // Render outage section
   const outageWindow = renderOutageSection(
     data.hasOutage,
-    data.outageStartDate,
-    data.outageStartTime,
-    data.outageEndDate,
-    data.outageEndTime
+    data.outageStartDateTime,
+    data.outageEndDateTime
   );
   
   // Render change items as HTML

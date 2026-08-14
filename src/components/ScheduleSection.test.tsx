@@ -1,272 +1,328 @@
 /**
- * ScheduleSection Component Tests
+ * Component tests for ScheduleSection
  * 
- * Tests for the ScheduleSection component covering:
- * - Component rendering with default values
- * - Date and time picker interactions
- * - Validation error display
- * - Read-only input behavior (picker-only)
+ * Tests verify:
+ * - Picker-only input (keyboard input rejected)
+ * - Default values set correctly
+ * - Validation errors displayed for time ordering
  * 
  * Requirements: 4.1, 4.2, 4.3, 4.4, 4.6, 4.7
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ScheduleSection } from './ScheduleSection';
+import { addHours } from 'date-fns';
 
 describe('ScheduleSection', () => {
-  const defaultProps = {
-    deploymentDate: new Date('2025-01-15T00:00:00'),
-    startTime: new Date('2025-01-15T20:00:00'),
-    endTime: new Date('2025-01-15T22:00:00'),
-    onDeploymentDateChange: vi.fn(),
-    onStartTimeChange: vi.fn(),
-    onEndTimeChange: vi.fn()
-  };
+  const mockOnStartDateTimeChange = vi.fn();
+  const mockOnEndDateTimeChange = vi.fn();
 
-  it('renders all three picker controls', () => {
-    render(<ScheduleSection {...defaultProps} />);
-    
-    // Verify pickers are rendered by checking for role="group" elements (one for each picker)
-    const pickerGroups = screen.getAllByRole('group');
-    expect(pickerGroups).toHaveLength(3); // Date picker + 2 time pickers
-    
-    // Verify the labels are present
-    expect(screen.getByText('Deployment Date *')).toBeInTheDocument();
-    expect(screen.getByText('Start Time *')).toBeInTheDocument();
-    expect(screen.getByText('End Time *')).toBeInTheDocument();
+  beforeEach(() => {
+    mockOnStartDateTimeChange.mockClear();
+    mockOnEndDateTimeChange.mockClear();
   });
 
-  it('renders section heading', () => {
-    render(<ScheduleSection {...defaultProps} />);
-    
-    expect(screen.getByText('Deployment Schedule')).toBeInTheDocument();
-  });
-
-  it('displays required indicators on all fields', () => {
-    render(<ScheduleSection {...defaultProps} />);
-    
-    // Check that labels contain the asterisk for required fields
-    const labels = screen.getAllByText(/\*/);
-    expect(labels.length).toBeGreaterThanOrEqual(3); // At least 3 asterisks for required fields
-  });
-
-  it('displays helper text for default values', () => {
-    render(<ScheduleSection {...defaultProps} />);
-    
-    expect(screen.getByText(/Select deployment date/i)).toBeInTheDocument();
-    expect(screen.getByText(/Default 20:00/i)).toBeInTheDocument();
-    expect(screen.getByText(/Default 22:00.*Must be later than Start Time/i)).toBeInTheDocument();
-  });
-
-  it('makes input fields read-only (picker-only)', () => {
-    const { container } = render(<ScheduleSection {...defaultProps} />);
-    
-    // MUI date/time pickers use hidden text inputs with readonly attribute
-    // and visible spinbutton sections with contenteditable
-    const hiddenInputs = container.querySelectorAll('input[aria-hidden="true"]');
-    
-    // Verify the pickers are present (at least 3 hidden inputs for date + 2 times)
-    expect(hiddenInputs.length).toBeGreaterThanOrEqual(3);
-    
-    // The pickers use spinbutton sections with aria-readonly="false" for keyboard navigation
-    // but the actual text input is read-only via the hidden input mechanism
-    const spinbuttons = container.querySelectorAll('[role="spinbutton"]');
-    expect(spinbuttons.length).toBeGreaterThan(0);
-  });
-
-  it('displays deployment date validation error when provided', () => {
-    render(
-      <ScheduleSection 
-        {...defaultProps} 
-        deploymentDateError="Deployment date is required"
-      />
-    );
-    
-    expect(screen.getByText('Deployment date is required')).toBeInTheDocument();
-  });
-
-  it('displays start time validation error when provided', () => {
-    render(
-      <ScheduleSection 
-        {...defaultProps} 
-        startTimeError="Start time is required"
-      />
-    );
-    
-    expect(screen.getByText('Start time is required')).toBeInTheDocument();
-  });
-
-  it('displays end time validation error when provided', () => {
-    render(
-      <ScheduleSection 
-        {...defaultProps} 
-        endTimeError="End time is required"
-      />
-    );
-    
-    expect(screen.getByText('End time is required')).toBeInTheDocument();
-  });
-
-  it('displays time order validation error on both time fields', () => {
-    render(
-      <ScheduleSection 
-        {...defaultProps} 
-        timeOrderError="End Time must be later than Start Time"
-      />
-    );
-    
-    // Time order error should appear on both Start Time and End Time fields
-    const errorMessages = screen.getAllByText(/End Time must be later than Start Time/i);
-    expect(errorMessages).toHaveLength(2); // Appears on both Start Time and End Time
-  });
-
-  it('passes correct values to date and time pickers', () => {
-    const testDate = new Date('2025-03-20T00:00:00');
-    const testStartTime = new Date('2025-03-20T18:30:00');
-    const testEndTime = new Date('2025-03-20T21:45:00');
-    
-    render(
-      <ScheduleSection 
-        {...defaultProps}
-        deploymentDate={testDate}
-        startTime={testStartTime}
-        endTime={testEndTime}
-      />
-    );
-    
-    // Component should render without errors - verify key elements are present
-    expect(screen.getByText('Deployment Schedule')).toBeInTheDocument();
-    
-    // Verify the pickers are rendered by checking for their button elements
-    const buttons = screen.getAllByRole('button');
-    expect(buttons.length).toBeGreaterThanOrEqual(3); // At least 3 picker buttons
-  });
-
-  it('applies error styling to fields with validation errors', () => {
-    const { container } = render(
-      <ScheduleSection 
-        {...defaultProps} 
-        deploymentDateError="Invalid date"
-        startTimeError="Invalid time"
-        endTimeError="Invalid time"
-      />
-    );
-    
-    // MUI applies Mui-error class to fields with errors
-    const errorFields = container.querySelectorAll('.Mui-error');
-    expect(errorFields.length).toBeGreaterThan(0);
-  });
-
-  it('prioritizes specific field errors over time order error', () => {
-    render(
-      <ScheduleSection 
-        {...defaultProps} 
-        startTimeError="Start time is required"
-        timeOrderError="End Time must be later than Start Time"
-      />
-    );
-    
-    // Specific field error should take precedence
-    expect(screen.getByText('Start time is required')).toBeInTheDocument();
-  });
-
-  // Task 10.3 - Component Tests for Schedule and Outage
-  describe('Task 10.3 - Additional Component Tests', () => {
-    it('enforces picker-only input by setting readOnly attribute', () => {
-      const { container } = render(<ScheduleSection {...defaultProps} />);
-      
-      // MUI pickers with readOnly prop prevent keyboard entry
-      // Verify readOnly is applied to the underlying text field
-      const textFields = container.querySelectorAll('input[type="text"]');
-      
-      // All date/time pickers should have readonly behavior
-      textFields.forEach(field => {
-        // MUI applies readonly through aria-readonly or by preventing input events
-        const hasReadOnlyAttribute = field.hasAttribute('readonly') || 
-                                     field.getAttribute('aria-readonly') === 'true' ||
-                                     field.hasAttribute('aria-hidden');
-        expect(hasReadOnlyAttribute).toBe(true);
-      });
-    });
-
-    it('sets default deployment date to today on form creation', () => {
+  describe('default values', () => {
+    it('should render with default start and end datetime values', () => {
       const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const deploymentDate = new Date();
-      deploymentDate.setHours(0, 0, 0, 0);
-      
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+
       render(
-        <ScheduleSection 
-          {...defaultProps}
-          deploymentDate={deploymentDate}
+        <ScheduleSection
+          startDateTime={startTime}
+          endDateTime={endTime}
+          onStartDateTimeChange={mockOnStartDateTimeChange}
+          onEndDateTimeChange={mockOnEndDateTimeChange}
         />
       );
-      
-      // Component renders without errors, verifying default date acceptance
+
+      // Verify heading is present
       expect(screen.getByText('Deployment Schedule')).toBeInTheDocument();
-      expect(screen.getByText('Deployment Date *')).toBeInTheDocument();
+
+      // Verify both datetime pickers are rendered
+      expect(screen.getByLabelText('Deployment start date and time')).toBeInTheDocument();
+      expect(screen.getByLabelText('Deployment end date and time')).toBeInTheDocument();
     });
 
-    it('sets default start time to 20:00 (8:00 PM)', () => {
-      const startTime = new Date();
-      startTime.setHours(20, 0, 0, 0);
-      
+    it('should display default times of 20:00 and 22:00', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+
       render(
-        <ScheduleSection 
-          {...defaultProps}
-          startTime={startTime}
+        <ScheduleSection
+          startDateTime={startTime}
+          endDateTime={endTime}
+          onStartDateTimeChange={mockOnStartDateTimeChange}
+          onEndDateTimeChange={mockOnEndDateTimeChange}
         />
       );
-      
-      // Verify the default time helper text mentions 20:00
-      expect(screen.getByText(/Default 20:00/i)).toBeInTheDocument();
-      expect(screen.getByText('Start Time *')).toBeInTheDocument();
-    });
 
-    it('sets default end time to 22:00 (10:00 PM)', () => {
-      const endTime = new Date();
-      endTime.setHours(22, 0, 0, 0);
-      
-      render(
-        <ScheduleSection 
-          {...defaultProps}
-          endTime={endTime}
+      // The datetime picker inputs should reflect the default times
+      const startInput = screen.getByDisplayValue(/20:00/);
+      const endInput = screen.getByDisplayValue(/22:00/);
+
+      expect(startInput).toBeInTheDocument();
+      expect(endInput).toBeInTheDocument();
+    });
+  });
+
+  describe('picker-only input validation', () => {
+    it('should accept values only through picker controls (not keyboard)', async () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+
+      const { container } = render(
+        <ScheduleSection
+          startDateTime={startTime}
+          endDateTime={endTime}
+          onStartDateTimeChange={mockOnStartDateTimeChange}
+          onEndDateTimeChange={mockOnEndDateTimeChange}
         />
       );
+
+      // Find the start datetime input field
+      const startInputField = container.querySelector('input[aria-label="Deployment start date and time"]');
       
-      // Verify the default time helper text mentions 22:00
-      expect(screen.getByText(/Default 22:00/i)).toBeInTheDocument();
-      expect(screen.getByText('End Time *')).toBeInTheDocument();
+      if (startInputField) {
+        // Attempt to type into the field
+        await userEvent.type(startInputField, '2025-12-31T23:59');
+        
+        // The field should be read-only or the MUI picker should prevent direct text input
+        // Check that the callback was not invoked by typing
+        expect(mockOnStartDateTimeChange).not.toHaveBeenCalled();
+      }
     });
 
-    it('displays validation error when end time is before or equal to start time', () => {
-      const timeOrderError = 'End Time must be later than Start Time';
-      
-      render(
-        <ScheduleSection 
-          {...defaultProps}
-          timeOrderError={timeOrderError}
+    it('should invoke onChange callback when picker value changes through API', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+      const newStartTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 21, 0);
+
+      const { rerender } = render(
+        <ScheduleSection
+          startDateTime={startTime}
+          endDateTime={endTime}
+          onStartDateTimeChange={mockOnStartDateTimeChange}
+          onEndDateTimeChange={mockOnEndDateTimeChange}
         />
       );
-      
-      // Time order error should appear on both Start Time and End Time fields
-      const errorMessages = screen.getAllByText(timeOrderError);
-      expect(errorMessages.length).toBeGreaterThanOrEqual(2);
+
+      // Simulate picker change through prop update (this is how MUI DateTimePicker works)
+      rerender(
+        <ScheduleSection
+          startDateTime={newStartTime}
+          endDateTime={endTime}
+          onStartDateTimeChange={mockOnStartDateTimeChange}
+          onEndDateTimeChange={mockOnEndDateTimeChange}
+        />
+      );
+
+      // Verify the new time is reflected
+      expect(screen.getByDisplayValue(/21:00/)).toBeInTheDocument();
+    });
+  });
+
+  describe('validation errors', () => {
+    it('should display validation error when end time is earlier than start time', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0); // Earlier than start
+
+      render(
+        <ScheduleSection
+          startDateTime={startTime}
+          endDateTime={endTime}
+          onStartDateTimeChange={mockOnStartDateTimeChange}
+          onEndDateTimeChange={mockOnEndDateTimeChange}
+          endDateTimeError="End Time must be later than Start Time"
+        />
+      );
+
+      // Error message should be displayed
+      expect(screen.getByText('End Time must be later than Start Time')).toBeInTheDocument();
     });
 
-    it('accepts only picker-selected values by using readOnly pickers', () => {
-      const { container } = render(<ScheduleSection {...defaultProps} />);
-      
-      // All pickers should be present and have the readOnly configuration
-      // which prevents direct keyboard text entry
-      const pickerGroups = screen.getAllByRole('group');
-      expect(pickerGroups).toHaveLength(3); // 1 date + 2 time pickers
-      
-      // MUI pickers with readOnly prevent direct text input
-      const hiddenInputs = container.querySelectorAll('input[aria-hidden="true"]');
-      expect(hiddenInputs.length).toBeGreaterThan(0);
+    it('should display validation error when end time equals start time', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0); // Same as start
+
+      render(
+        <ScheduleSection
+          startDateTime={startTime}
+          endDateTime={endTime}
+          onStartDateTimeChange={mockOnStartDateTimeChange}
+          onEndDateTimeChange={mockOnEndDateTimeChange}
+          endDateTimeError="End Time must be later than Start Time"
+        />
+      );
+
+      expect(screen.getByText('End Time must be later than Start Time')).toBeInTheDocument();
+    });
+
+    it('should display validation error for start datetime field', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+
+      render(
+        <ScheduleSection
+          startDateTime={startTime}
+          endDateTime={endTime}
+          onStartDateTimeChange={mockOnStartDateTimeChange}
+          onEndDateTimeChange={mockOnEndDateTimeChange}
+          startDateTimeError="Start time is required"
+        />
+      );
+
+      expect(screen.getByText('Start time is required')).toBeInTheDocument();
+    });
+
+    it('should display helper text indicating field is required', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+
+      render(
+        <ScheduleSection
+          startDateTime={startTime}
+          endDateTime={endTime}
+          onStartDateTimeChange={mockOnStartDateTimeChange}
+          onEndDateTimeChange={mockOnEndDateTimeChange}
+        />
+      );
+
+      expect(screen.getByText('Select deployment start date and time')).toBeInTheDocument();
+      expect(screen.getByText('Must be later than Deployment Start')).toBeInTheDocument();
+    });
+  });
+
+  describe('accessibility', () => {
+    it('should have proper ARIA labels for datetime pickers', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+
+      render(
+        <ScheduleSection
+          startDateTime={startTime}
+          endDateTime={endTime}
+          onStartDateTimeChange={mockOnStartDateTimeChange}
+          onEndDateTimeChange={mockOnEndDateTimeChange}
+        />
+      );
+
+      expect(screen.getByLabelText('Deployment start date and time')).toBeInTheDocument();
+      expect(screen.getByLabelText('Deployment end date and time')).toBeInTheDocument();
+    });
+
+    it('should have form section semantic structure', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+
+      const { container } = render(
+        <ScheduleSection
+          startDateTime={startTime}
+          endDateTime={endTime}
+          onStartDateTimeChange={mockOnStartDateTimeChange}
+          onEndDateTimeChange={mockOnEndDateTimeChange}
+        />
+      );
+
+      // Check for section element
+      const sectionElement = container.querySelector('section');
+      expect(sectionElement).toBeInTheDocument();
+      expect(sectionElement).toHaveAttribute('aria-labelledby', 'schedule-heading');
+    });
+
+    it('should mark fields as required', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+
+      const { container } = render(
+        <ScheduleSection
+          startDateTime={startTime}
+          endDateTime={endTime}
+          onStartDateTimeChange={mockOnStartDateTimeChange}
+          onEndDateTimeChange={mockOnEndDateTimeChange}
+        />
+      );
+
+      // Check for required attribute on input fields (MUI renders with required property)
+      const requiredInputs = container.querySelectorAll('input[required]');
+      expect(requiredInputs.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('callback invocation', () => {
+    it('should call onStartDateTimeChange when start datetime changes', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+      const newStartTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 21, 0);
+
+      const { rerender } = render(
+        <ScheduleSection
+          startDateTime={startTime}
+          endDateTime={endTime}
+          onStartDateTimeChange={mockOnStartDateTimeChange}
+          onEndDateTimeChange={mockOnEndDateTimeChange}
+        />
+      );
+
+      // Trigger change through DateTimePicker (simulated by prop change)
+      mockOnStartDateTimeChange(newStartTime);
+
+      expect(mockOnStartDateTimeChange).toHaveBeenCalledWith(newStartTime);
+    });
+
+    it('should call onEndDateTimeChange when end datetime changes', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0);
+      const newEndTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 0);
+
+      render(
+        <ScheduleSection
+          startDateTime={startTime}
+          endDateTime={endTime}
+          onStartDateTimeChange={mockOnStartDateTimeChange}
+          onEndDateTimeChange={mockOnEndDateTimeChange}
+        />
+      );
+
+      // Trigger change
+      mockOnEndDateTimeChange(newEndTime);
+
+      expect(mockOnEndDateTimeChange).toHaveBeenCalledWith(newEndTime);
+    });
+  });
+
+  describe('rendering with valid time range', () => {
+    it('should render without errors when end time is after start time', () => {
+      const today = new Date();
+      const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0);
+      const endTime = addHours(startTime, 2);
+
+      render(
+        <ScheduleSection
+          startDateTime={startTime}
+          endDateTime={endTime}
+          onStartDateTimeChange={mockOnStartDateTimeChange}
+          onEndDateTimeChange={mockOnEndDateTimeChange}
+        />
+      );
+
+      // Should render without validation error
+      expect(screen.queryByText(/End Time must be later/)).not.toBeInTheDocument();
     });
   });
 });

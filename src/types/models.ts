@@ -142,35 +142,26 @@ export interface DeploymentFormData {
   environment: Environment | null;
   
   /** Computed deployment title (read-only, derived from other fields)
-   * Format: [CHG#####] — [Application Name: Release Version - Deploy Product to ENVIRONMENT]
+   * Format: [CHG#####] — [Application Name: Release Version - Deploy to ENVIRONMENT]
    */
   deploymentTitle: string;
   
   // ===== Schedule =====
-  /** Deployment date (required, default: current date) */
-  deploymentDate: Date;
+  /** Deployment start date/time (required, default: today at 20:00) */
+  startDateTime: Date;
   
-  /** Deployment start time (required, default: 20:00) */
-  startTime: Date;
-  
-  /** Deployment end time (required, default: 22:00) */
-  endTime: Date;
+  /** Deployment end date/time (required, default: today at 22:00) */
+  endDateTime: Date;
   
   // ===== Outage Information =====
   /** Whether this deployment includes an outage (default: false) */
   hasOutage: boolean;
   
-  /** Outage start date (required if hasOutage is true) */
-  outageStartDate: Date | null;
+  /** Outage start date/time (required if hasOutage is true) */
+  outageStartDateTime: Date | null;
   
-  /** Outage start time (required if hasOutage is true) */
-  outageStartTime: Date | null;
-  
-  /** Outage end date (required if hasOutage is true) */
-  outageEndDate: Date | null;
-  
-  /** Outage end time (required if hasOutage is true) */
-  outageEndTime: Date | null;
+  /** Outage end date/time (required if hasOutage is true) */
+  outageEndDateTime: Date | null;
   
   // ===== Change Items =====
   /** List of Jira change items (1-999 items required) */

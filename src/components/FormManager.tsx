@@ -57,6 +57,8 @@ export interface FormManagerProps {
   validationErrors?: ValidationError[];
   /** Callback to clear a validation error for a specific form and field */
   onClearFieldError?: (formId: string, field: string) => void;
+  /** Callback for onBlur field validation (formId, field, value) */
+  onBlurValidate?: (formId: string, field: string, value: string) => void;
 
   // ----- Output generation -----
   /** Whether output generation is in progress (drives the progress indicator) */
@@ -67,7 +69,13 @@ export interface FormManagerProps {
 
 const DEFAULT_MAX_FORMS = 5;
 
-export const FormManager: React.FC<FormManagerProps> = ({
+/**
+ * FormManager component
+ * 
+ * Performance optimization:
+ * - Wrapped with React.memo to prevent re-renders when parent changes (22.2)
+ */
+function FormManagerComponent({
   maxForms = DEFAULT_MAX_FORMS,
   forms: formsProp,
   lastAddedFormId: lastAddedFormIdProp,
@@ -79,9 +87,10 @@ export const FormManager: React.FC<FormManagerProps> = ({
   canRemoveForm: canRemoveFormProp,
   validationErrors = [],
   onClearFieldError,
+  onBlurValidate,
   isGenerating = false,
   progress,
-}) => {
+}: FormManagerProps) {
   // Internal fallback state for standalone usage. When the parent lifts state
   // and passes it via props, these internal values are simply overridden below.
   const internal = useFormManager();
@@ -147,6 +156,7 @@ export const FormManager: React.FC<FormManagerProps> = ({
                 onClick={addForm}
                 disabled={!canAddForm}
                 aria-label={canAddForm ? 'Add new deployment form' : 'Maximum of 5 forms reached'}
+                data-testid="add-form-button"
               >
                 Add Form
               </Button>
@@ -202,9 +212,15 @@ export const FormManager: React.FC<FormManagerProps> = ({
             onClearFieldError={
               onClearFieldError ? (field) => onClearFieldError(formData.formId, field) : undefined
             }
+            onBlurValidate={
+              onBlurValidate ? (field, value) => onBlurValidate(formData.formId, field, value) : undefined
+            }
           />
         ))}
       </Stack>
     </Box>
   );
-};
+}
+
+// Wrap component with React.memo to prevent re-renders (22.2: Performance optimization)
+export const FormManager = React.memo(FormManagerComponent);

@@ -1,12 +1,11 @@
 /**
  * ScheduleSection Component
  * 
- * Provides date and time picker controls for deployment schedule:
- * - Deployment Date (picker-only, reject keyboard input)
- * - Start Time (picker-only, reject keyboard input)
- * - End Time (picker-only, reject keyboard input)
- * - Default values: today, 20:00, 22:00
- * - Validates End Time > Start Time
+ * Provides combined date/time picker controls for deployment schedule:
+ * - Deployment Start (DateTimePicker)
+ * - Deployment End (DateTimePicker)
+ * - Default values: today 20:00, today 22:00
+ * - Validates End > Start
  * 
  * Requirements: 4.1, 4.2, 4.3, 4.4, 4.6, 4.7
  */
@@ -15,47 +14,37 @@ import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { TimePicker } from '@mui/x-date-pickers/TimePicker';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 
 export interface ScheduleSectionProps {
-  /** Current deployment date value */
-  deploymentDate: Date;
-  /** Current start time value */
-  startTime: Date;
-  /** Current end time value */
-  endTime: Date;
-  /** Callback when deployment date changes */
-  onDeploymentDateChange: (value: Date | null) => void;
-  /** Callback when start time changes */
-  onStartTimeChange: (value: Date | null) => void;
-  /** Callback when end time changes */
-  onEndTimeChange: (value: Date | null) => void;
-  /** Validation error for deployment date field */
-  deploymentDateError?: string;
-  /** Validation error for start time field */
-  startTimeError?: string;
-  /** Validation error for end time field */
-  endTimeError?: string;
-  /** Validation error for time ordering (End Time <= Start Time) */
-  timeOrderError?: string;
+  /** Current deployment start date/time value */
+  startDateTime: Date;
+  /** Current deployment end date/time value */
+  endDateTime: Date;
+  /** Callback when deployment start date/time changes */
+  onStartDateTimeChange: (value: Date | null) => void;
+  /** Callback when deployment end date/time changes */
+  onEndDateTimeChange: (value: Date | null) => void;
+  /** Validation error for start date/time field */
+  startDateTimeError?: string;
+  /** Validation error for end date/time field */
+  endDateTimeError?: string;
 }
 
 /**
  * ScheduleSection component for entering deployment schedule
+ * 
+ * Performance optimization:
+ * - Wrapped with React.memo to prevent re-renders when parent changes (22.2)
  */
-export const ScheduleSection: React.FC<ScheduleSectionProps> = ({
-  deploymentDate,
-  startTime,
-  endTime,
-  onDeploymentDateChange,
-  onStartTimeChange,
-  onEndTimeChange,
-  deploymentDateError,
-  startTimeError,
-  endTimeError,
-  timeOrderError
-}) => {
+function ScheduleSectionComponent({
+  startDateTime,
+  endDateTime,
+  onStartDateTimeChange,
+  onEndDateTimeChange,
+  startDateTimeError,
+  endDateTimeError
+}: ScheduleSectionProps) {
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box sx={{ mb: 3 }} component="section" aria-labelledby="schedule-heading">
@@ -63,81 +52,59 @@ export const ScheduleSection: React.FC<ScheduleSectionProps> = ({
           Deployment Schedule
         </Typography>
 
-        {/* Deployment Date Picker - Requirements: 4.1, 4.2 */}
-        <DatePicker
-          label="Deployment Date *"
-          value={deploymentDate}
-          onChange={onDeploymentDateChange}
-          readOnly
+        {/* Deployment Start DateTimePicker - Requirements: 4.1, 4.2, 4.3 */}
+        <DateTimePicker
+          label="Deployment Start *"
+          value={startDateTime}
+          onChange={onStartDateTimeChange}
+          ampm={false}
           slotProps={{
             textField: {
               fullWidth: true,
               required: true,
-              error: !!deploymentDateError,
-              helperText: deploymentDateError || 'Select deployment date',
+              error: !!startDateTimeError,
+              helperText: startDateTimeError || 'Select deployment start date and time',
               sx: { mb: 2 }
             },
             field: {
-              'aria-label': 'Deployment date',
-              'aria-describedby': 'deployment-date-help',
-              'aria-invalid': !!deploymentDateError
+              'aria-label': 'Deployment start date and time',
+              'aria-describedby': 'start-datetime-help',
+              'aria-invalid': !!startDateTimeError
             }
           }}
         />
-        <span id="deployment-date-help" className="sr-only">
-          Select the date when the deployment will occur. Use the date picker to choose a date.
+        <span id="start-datetime-help" className="sr-only">
+          Select the date and time when the deployment will start. Defaults to today at 20:00.
         </span>
 
-        {/* Start Time Picker - Requirements: 4.1, 4.3 */}
-        <TimePicker
-          label="Start Time *"
-          value={startTime}
-          onChange={onStartTimeChange}
-          readOnly
+        {/* Deployment End DateTimePicker - Requirements: 4.1, 4.4, 4.6 */}
+        <DateTimePicker
+          label="Deployment End *"
+          value={endDateTime}
+          onChange={onEndDateTimeChange}
+          ampm={false}
           slotProps={{
             textField: {
               fullWidth: true,
               required: true,
-              error: !!startTimeError || !!timeOrderError,
-              helperText: startTimeError || timeOrderError || 'Default 20:00 (8:00 PM)',
+              error: !!endDateTimeError,
+              helperText: endDateTimeError || 'Must be later than Deployment Start',
               sx: { mb: 2 }
             },
             field: {
-              'aria-label': 'Deployment start time',
-              'aria-describedby': 'start-time-help',
-              'aria-invalid': !!(startTimeError || timeOrderError)
+              'aria-label': 'Deployment end date and time',
+              'aria-describedby': 'end-datetime-help',
+              'aria-invalid': !!endDateTimeError
             }
           }}
         />
-        <span id="start-time-help" className="sr-only">
-          Select the time when the deployment will start. Defaults to 8:00 PM. Use the time picker to choose a time.
-        </span>
-
-        {/* End Time Picker - Requirements: 4.1, 4.4, 4.6 */}
-        <TimePicker
-          label="End Time *"
-          value={endTime}
-          onChange={onEndTimeChange}
-          readOnly
-          slotProps={{
-            textField: {
-              fullWidth: true,
-              required: true,
-              error: !!endTimeError || !!timeOrderError,
-              helperText: endTimeError || timeOrderError || 'Default 22:00 (10:00 PM). Must be later than Start Time.',
-              sx: { mb: 2 }
-            },
-            field: {
-              'aria-label': 'Deployment end time',
-              'aria-describedby': 'end-time-help',
-              'aria-invalid': !!(endTimeError || timeOrderError)
-            }
-          }}
-        />
-        <span id="end-time-help" className="sr-only">
-          Select the time when the deployment will end. Defaults to 10:00 PM. Must be later than the start time. Use the time picker to choose a time.
+        <span id="end-datetime-help" className="sr-only">
+          Select the date and time when the deployment will end. Defaults to today at 22:00. Must be later than the start.
         </span>
       </Box>
     </LocalizationProvider>
   );
-};
+}
+
+// Wrap component with React.memo to prevent re-renders (22.2: Performance optimization)
+export const ScheduleSection = React.memo(ScheduleSectionComponent);

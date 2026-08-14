@@ -11,13 +11,94 @@
  * - Show validation errors for empty text or text > 500 chars
  * - Preserve insertion order for rendering
  * 
+ * Performance optimizations:
+ * - Extracted ImpactItemRow component and wrapped with React.memo (22.2)
+ * - Parent component wrapped with React.memo (22.2: Performance optimization)
+ * - Callbacks memoized with useCallback (22.2: Performance optimization)
+ * 
  * Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8
  */
 
-import React from 'react';
+import { useCallback, memo } from 'react';
 import { Box, Typography, TextField, Button, IconButton, Alert } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import type { ImpactItem } from '../types/models';
+
+/**
+ * Props for individual impact item row
+ */
+interface ImpactItemRowProps {
+  item: ImpactItem;
+  index: number;
+  isAtMinCapacity: boolean;
+  error?: string;
+  onTextChange: (itemId: string, newText: string) => void;
+  onRemoveItem: (itemId: string) => void;
+}
+
+/**
+ * ImpactItemRow - Individual row component for a single impact item
+ * Memoized with React.memo to prevent re-renders of other rows (22.2: Performance)
+ */
+const ImpactItemRow = memo<ImpactItemRowProps>(({
+  item,
+  index,
+  isAtMinCapacity,
+  error,
+  onTextChange,
+  onRemoveItem
+}) => {
+  const charCount = item.text.length;
+  const isOverLimit = charCount > 500;
+  const charCountText = isOverLimit
+    ? `${charCount}/500 characters - exceeds maximum length`
+    : `${charCount}/500 characters`;
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        gap: 1,
+        mb: 2,
+        alignItems: 'flex-start'
+      }}
+    >
+      {/* Impact text textarea - Requirements: 7.3, 7.4 */}
+      <TextField
+        label={`Impact Item ${index + 1}`}
+        value={item.text}
+        onChange={(e) => onTextChange(item.id, e.target.value)}
+        multiline
+        rows={3}
+        fullWidth
+        required
+        error={!!error}
+        helperText={error || charCountText}
+        slotProps={{
+          htmlInput: {
+            'aria-label': `Impact item ${index + 1} description`,
+            'aria-describedby': error ? `impact-item-${index}-error` : `impact-item-${index}-help`,
+            'aria-invalid': !!error
+          }
+        }}
+      />
+      
+      {/* Remove button - Requirements: 7.5, 7.6 */}
+      <IconButton
+        onClick={() => onRemoveItem(item.id)}
+        disabled={isAtMinCapacity}
+        color="error"
+        aria-label={`Remove impact item ${index + 1}`}
+        title={isAtMinCapacity ? 'At least one impact item is required' : undefined}
+        sx={{ mt: 1 }}
+      >
+        <DeleteIcon />
+      </IconButton>
+    </Box>
+  );
+});
+
+ImpactItemRow.displayName = 'ImpactItemRow';
 
 export interface ImpactSectionProps {
   /** Current list of impact items (1-100 items) */
@@ -30,12 +111,14 @@ export interface ImpactSectionProps {
 
 /**
  * ImpactSection component for managing deployment impact items
+ * 
+ * Performance: Memoized with React.memo and uses useCallback for handlers (22.2)
  */
-export const ImpactSection: React.FC<ImpactSectionProps> = ({
+function ImpactSectionComponent({
   impactItems,
   onImpactItemsChange,
   errors = {}
-}) => {
+}: ImpactSectionProps) {
   // Check if we're at maximum capacity (100 items) - Requirement 7.2
   const isAtMaxCapacity = impactItems.length >= 100;
   
@@ -45,8 +128,9 @@ export const ImpactSection: React.FC<ImpactSectionProps> = ({
   /**
    * Handle adding a new impact item
    * Requirements: 7.1, 7.2
+   * Memoized with useCallback (22.2: Performance optimization)
    */
-  const handleAddItem = () => {
+  const handleAddItem = useCallback(() => {
     if (isAtMaxCapacity) {
       return; // Already at max capacity
     }
@@ -59,13 +143,14 @@ export const ImpactSection: React.FC<ImpactSectionProps> = ({
     
     // Append to list (preserves insertion order - Requirement 7.8)
     onImpactItemsChange([...impactItems, newItem]);
-  };
+  }, [impactItems.length, isAtMaxCapacity, onImpactItemsChange]);
 
   /**
    * Handle removing an impact item
    * Requirements: 7.5, 7.6
+   * Memoized with useCallback (22.2: Performance optimization)
    */
-  const handleRemoveItem = (itemId: string) => {
+  const handleRemoveItem = useCallback((itemId: string) => {
     if (isAtMinCapacity) {
       return; // Cannot remove last item
     }
@@ -73,19 +158,20 @@ export const ImpactSection: React.FC<ImpactSectionProps> = ({
     // Remove item by ID, preserving order of remaining items
     const updatedItems = impactItems.filter(item => item.id !== itemId);
     onImpactItemsChange(updatedItems);
-  };
+  }, [impactItems, isAtMinCapacity, onImpactItemsChange]);
 
   /**
    * Handle updating an impact item's text
    * Requirements: 7.3, 7.4
+   * Memoized with useCallback (22.2: Performance optimization)
    */
-  const handleTextChange = (itemId: string, newText: string) => {
+  const handleTextChange = useCallback((itemId: string, newText: string) => {
     // Update the specific item, preserving order
     const updatedItems = impactItems.map(item =>
       item.id === itemId ? { ...item, text: newText } : item
     );
     onImpactItemsChange(updatedItems);
-  };
+  }, [impactItems, onImpactItemsChange]);
 
   return (
     <Box sx={{ mb: 3 }} component="section" aria-labelledby="impact-items-heading">
@@ -115,47 +201,15 @@ export const ImpactSection: React.FC<ImpactSectionProps> = ({
         const itemError = errors[fieldKey];
 
         return (
-          <Box
+          <ImpactItemRow
             key={item.id}
-            sx={{
-              display: 'flex',
-              gap: 1,
-              mb: 2,
-              alignItems: 'flex-start'
-            }}
-          >
-            {/* Impact text textarea - Requirements: 7.3, 7.4 */}
-            <TextField
-              label={`Impact Item ${index + 1}`}
-              value={item.text}
-              onChange={(e) => handleTextChange(item.id, e.target.value)}
-              multiline
-              rows={3}
-              fullWidth
-              required
-              error={!!itemError}
-              helperText={itemError}
-              slotProps={{
-                htmlInput: {
-                  maxLength: 500, // Browser-level constraint
-                  'aria-label': `Impact item ${index + 1} description`,
-                  'aria-describedby': itemError ? `impact-item-${index}-error` : `impact-item-${index}-help`,
-                  'aria-invalid': !!itemError
-                }
-              }}
-            />
-            
-            {/* Remove button - Requirements: 7.5, 7.6 */}
-            <IconButton
-              onClick={() => handleRemoveItem(item.id)}
-              disabled={isAtMinCapacity}
-              color="error"
-              aria-label={isAtMinCapacity ? 'Cannot remove - at least one impact item required' : `Remove impact item ${index + 1}`}
-              sx={{ mt: 1 }}
-            >
-              <DeleteIcon />
-            </IconButton>
-          </Box>
+            item={item}
+            index={index}
+            isAtMinCapacity={isAtMinCapacity}
+            error={itemError}
+            onTextChange={handleTextChange}
+            onRemoveItem={handleRemoveItem}
+          />
         );
       })}
 
@@ -166,7 +220,6 @@ export const ImpactSection: React.FC<ImpactSectionProps> = ({
         onClick={handleAddItem}
         disabled={isAtMaxCapacity}
         sx={{ mt: 1 }}
-        aria-label={isAtMaxCapacity ? 'Cannot add more - maximum 100 items reached' : 'Add another impact item'}
       >
         Add Impact Item
       </Button>
@@ -179,4 +232,7 @@ export const ImpactSection: React.FC<ImpactSectionProps> = ({
       )}
     </Box>
   );
-};
+}
+
+// Wrap component with React.memo to prevent re-renders (22.2: Performance optimization)
+export const ImpactSection = memo(ImpactSectionComponent);

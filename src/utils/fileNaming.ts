@@ -10,40 +10,13 @@
 import { DeploymentFormData } from '../types/models';
 
 /**
- * Formats a Date object as an 8-digit YYYYMMDD string
- * 
- * @param date - The date to format
- * @returns 8-digit date string (e.g., "20250315" for March 15, 2025)
- * 
- * Requirements: 12.2
- */
-function formatYYYYMMDD(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}${month}${day}`;
-}
-
-/**
- * Replaces all space characters in a string with underscores
- * 
- * @param text - The text to process
- * @returns The text with spaces replaced by underscores
- * 
- * Requirements: 12.3
- */
-function replaceSpacesWithUnderscores(text: string): string {
-  return text.replace(/ /g, '_');
-}
-
-/**
  * Generates the base file name for deployment notification artifacts
  * 
  * The base file name follows the format:
  * `<Application>_<Environment>_<CHG#>_<YYYYMMDD>`
  * 
- * All space characters in the Application, Environment, and CHG# components
- * are replaced with underscores before concatenation.
+ * Where spaces in Application, Environment, and CHG# are replaced with underscores.
+ * Date is formatted as an 8-digit YYYYMMDD string.
  * 
  * @param data - The deployment form data
  * @returns The base file name (without extension), or null if any required component is missing
@@ -51,15 +24,15 @@ function replaceSpacesWithUnderscores(text: string): string {
  * @example
  * ```typescript
  * const data: DeploymentFormData = {
- *   application: { name: 'AO Crew Training', ... },
- *   environment: 'PROD',
+ *   application: { name: 'OQS SimLog', ... },
  *   changeNumber: 'CHG12345',
- *   deploymentDate: new Date('2025-03-15'),
+ *   environment: 'PROD',
+ *   startDateTime: new Date('2025-01-15'),
  *   ...
  * };
  * 
  * const baseName = generateBaseFileName(data);
- * // Returns: "AO_Crew_Training_PROD_CHG12345_20250315"
+ * // Returns: "OQS_SimLog_PROD_CHG12345_20250115"
  * ```
  * 
  * Requirements: 12.1, 12.2, 12.3, 12.6
@@ -67,28 +40,37 @@ function replaceSpacesWithUnderscores(text: string): string {
 export function generateBaseFileName(data: DeploymentFormData): string | null {
   // Check if all required components are present
   // Requirements: 12.6
-  if (!data.application || !data.environment || !data.changeNumber || !data.deploymentDate) {
+  if (!data.application || !data.environment || !data.changeNumber || !data.startDateTime) {
     return null;
   }
 
-  // Extract and process each component
-  // Requirements: 12.3
-  const application = replaceSpacesWithUnderscores(data.application.name);
-  const environment = replaceSpacesWithUnderscores(data.environment);
-  const changeNumber = replaceSpacesWithUnderscores(data.changeNumber);
-  const date = formatYYYYMMDD(data.deploymentDate);
+  // Helper function to replace spaces with underscores
+  // Requirement: 12.3
+  const slugify = (text: string): string => text.replace(/ /g, '_');
 
-  // Concatenate components with underscores
-  // Requirements: 12.1, 12.2
-  return `${application}_${environment}_${changeNumber}_${date}`;
+  // Extract and format components
+  const app = slugify(data.application.name);
+  const env = slugify(data.environment);
+  const chg = slugify(data.changeNumber);
+  
+  // Format deployment date as YYYYMMDD
+  // Requirement: 12.2
+  const year = data.startDateTime.getFullYear();
+  const month = String(data.startDateTime.getMonth() + 1).padStart(2, '0');
+  const day = String(data.startDateTime.getDate()).padStart(2, '0');
+  const dateStr = `${year}${month}${day}`;
+
+  // Construct base file name
+  // Format: <Application>_<Environment>_<CHG#>_<YYYYMMDD>
+  // Requirements: 12.1
+  return `${app}_${env}_${chg}_${dateStr}`;
 }
 
 /**
  * Detects file name collisions among a set of deployment forms
  * 
  * Groups forms by their base file name. Forms are classified as colliding
- * if and only if they share the same application, environment, change number,
- * and deployment date.
+ * if they have the same change number and application.
  * 
  * @param forms - Array of deployment form data
  * @returns Map where keys are base file names and values are arrays of forms that share that name
@@ -98,8 +80,8 @@ export function generateBaseFileName(data: DeploymentFormData): string | null {
  * const forms = [form1, form2, form3];
  * const collisions = detectCollisions(forms);
  * // Returns: Map {
- * //   "Crew_Portal_PROD_CHG12345_20250315" => [form1, form2],
- * //   "AO_Crew_Training_QA_CHG67890_20250316" => [form3]
+ * //   "CHG12345 | Crew Portal" => [form1, form2],
+ * //   "CHG67890 | OQS SimLog" => [form3]
  * // }
  * ```
  * 
@@ -142,17 +124,17 @@ export function detectCollisions(forms: DeploymentFormData[]): Map<string, Deplo
  * @example
  * ```typescript
  * const forms = [
- *   { formId: 'form-2', ... }, // collides with form-1 and form-3
- *   { formId: 'form-1', ... }, // collides with form-2 and form-3
- *   { formId: 'form-3', ... }, // collides with form-1 and form-2
- *   { formId: 'form-4', ... }  // no collision
+ *   { formId: 'form-2', application: { name: 'Crew Portal' }, changeNumber: 'CHG12345', ... },
+ *   { formId: 'form-1', application: { name: 'Crew Portal' }, changeNumber: 'CHG12345', ... },
+ *   { formId: 'form-3', application: { name: 'Crew Portal' }, changeNumber: 'CHG12345', ... },
+ *   { formId: 'form-4', application: { name: 'OQS SimLog' }, changeNumber: 'CHG67890', ... }
  * ];
  * const fileNames = disambiguateFileNames(forms);
  * // Returns: Map {
- * //   'form-1' => 'Crew_Portal_PROD_CHG12345_20250315',       // first (no suffix)
- * //   'form-2' => 'Crew_Portal_PROD_CHG12345_20250315-1',     // second
- * //   'form-3' => 'Crew_Portal_PROD_CHG12345_20250315-2',     // third
- * //   'form-4' => 'AO_Crew_Training_QA_CHG67890_20250316'     // no collision
+ * //   'form-1' => 'CHG12345 | Crew Portal',       // first (no suffix)
+ * //   'form-2' => 'CHG12345 | Crew Portal-1',     // second
+ * //   'form-3' => 'CHG12345 | Crew Portal-2',     // third
+ * //   'form-4' => 'CHG67890 | OQS SimLog'         // no collision
  * // }
  * ```
  * 

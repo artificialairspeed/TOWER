@@ -8,7 +8,7 @@ The `DeploymentTitleDisplay` component is a read-only text field that displays t
 
 This component satisfies requirements 3.6, 3.7, and 3.8:
 
-- **3.6**: Computes the deployment title in the format `[CHG#####] — [Application Name: Release Version - Deploy Product to ENVIRONMENT]`
+- **3.6**: Computes the deployment title in the format `[CHG#####] — [Application Name: Release Version - Deploy to ENVIRONMENT]`
 - **3.7**: Updates the title within 500ms of any change to Change Number, Release Version, Environment, or Application
 - **3.8**: Displays the title as a read-only value that cannot be edited directly
 

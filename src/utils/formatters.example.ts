@@ -16,14 +16,11 @@ const exampleFormData: DeploymentFormData = {
   releaseVersion: 'v5.4.1',
   environment: 'PROD',
   deploymentTitle: '', // This would be computed
-  deploymentDate: new Date('2025-03-05'),
-  startTime: new Date('2025-03-05T20:00:00'),
-  endTime: new Date('2025-03-05T22:00:00'),
+  startDateTime: new Date('2025-03-05T20:00:00'),
+  endDateTime: new Date('2025-03-05T22:00:00'),
   hasOutage: false,
-  outageStartDate: null,
-  outageStartTime: null,
-  outageEndDate: null,
-  outageEndTime: null,
+  outageStartDateTime: null,
+  outageEndDateTime: null,
   changeItems: [],
   impactItems: [],
   contactName: 'John Doe',
@@ -33,7 +30,7 @@ const exampleFormData: DeploymentFormData = {
 
 const title = generateDeploymentTitle(exampleFormData);
 console.log('Generated Title:', title);
-// Output: [CHG12345] — [AO Crew Training: v5.4.1 - Deploy Product to PROD]
+// Output: [CHG12345] — [AO Crew Training: v5.4.1 - Deploy to PROD]
 
 // Example 2: Generate notification header
 const header = generateNotificationHeader('Crew Portal');
@@ -58,4 +55,4 @@ const qaFormData: DeploymentFormData = {
 
 const qaTitle = generateDeploymentTitle(qaFormData);
 console.log('QA Title:', qaTitle);
-// Output: [CHG12345] — [AO Crew Training: v5.4.1 - Deploy Product to QA]
+// Output: [CHG12345] — [AO Crew Training: v5.4.1 - Deploy to QA]

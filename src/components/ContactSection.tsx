@@ -35,12 +35,17 @@ export interface ContactSectionProps {
   contactEmailError?: string;
   /** Validation error for contact phone field */
   contactPhoneError?: string;
+  /** Callback for onBlur field validation (field, value) */
+  onBlurValidate?: (field: string, value: string) => void;
 }
 
 /**
  * ContactSection component for entering contact information
+ * 
+ * Performance optimization:
+ * - Wrapped with React.memo to prevent re-renders when parent changes (22.2)
  */
-export const ContactSection: React.FC<ContactSectionProps> = ({
+function ContactSectionComponent({
   contactName,
   contactEmail,
   contactPhone,
@@ -49,8 +54,9 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
   onContactPhoneChange,
   contactNameError,
   contactEmailError,
-  contactPhoneError
-}) => {
+  contactPhoneError,
+  onBlurValidate
+}: ContactSectionProps) {
   return (
     <Box sx={{ mb: 3 }} component="section" aria-labelledby="contact-heading">
       <Typography variant="h6" gutterBottom id="contact-heading">
@@ -64,8 +70,9 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
         label="Contact Name"
         value={contactName}
         onChange={(e) => onContactNameChange(e.target.value)}
+        onBlur={() => onBlurValidate?.('contactName', contactName)}
         error={!!contactNameError}
-        helperText={contactNameError}
+        helperText={contactNameError || 'Max 255 characters'}
         slotProps={{
           htmlInput: {
             maxLength: 255,
@@ -85,8 +92,9 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
         label="Email"
         value={contactEmail}
         onChange={(e) => onContactEmailChange(e.target.value)}
+        onBlur={() => onBlurValidate?.('contactEmail', contactEmail)}
         error={!!contactEmailError}
-        helperText={contactEmailError}
+        helperText={contactEmailError || 'Valid email format required (example@domain.com)'}
         slotProps={{
           htmlInput: {
             maxLength: 255,
@@ -112,6 +120,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
           if (formatted !== contactPhone) {
             onContactPhoneChange(formatted);
           }
+          onBlurValidate?.('contactPhone', formatted);
         }}
         error={!!contactPhoneError}
         helperText={contactPhoneError || 'Any format accepted. Format: (###) ###-#### applied automatically'}
@@ -127,4 +136,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
       />
     </Box>
   );
-};
+}
+
+// Wrap component with React.memo to prevent re-renders (22.2: Performance optimization)
+export const ContactSection = React.memo(ContactSectionComponent);

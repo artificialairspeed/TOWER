@@ -37,7 +37,7 @@ function generateItemId(): string {
  * @param minutes - Minute (0-59)
  * @returns Date object set to today at the specified time
  */
-function createTimeToday(hours: number, minutes: number = 0): Date {
+function createDateTimeToday(hours: number, minutes: number = 0): Date {
   const date = new Date();
   date.setHours(hours, minutes, 0, 0); // Set hours, minutes, seconds=0, ms=0
   return date;
@@ -88,9 +88,6 @@ function createDefaultImpactItem(): ImpactItem {
  * @returns DeploymentFormData with default values
  */
 export function createDefaultForm(): DeploymentFormData {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); // Set to midnight for date comparison
-  
   return {
     // Identification
     formId: generateFormId(),
@@ -105,16 +102,13 @@ export function createDefaultForm(): DeploymentFormData {
     deploymentTitle: '', // Computed, starts empty
     
     // Schedule (default: today at 20:00-22:00)
-    deploymentDate: today,
-    startTime: createTimeToday(20, 0), // 20:00 = 8:00 PM
-    endTime: createTimeToday(22, 0),   // 22:00 = 10:00 PM
+    startDateTime: createDateTimeToday(20, 0), // 20:00 = 8:00 PM
+    endDateTime: createDateTimeToday(22, 0),   // 22:00 = 10:00 PM
     
     // Outage Information (default: no outage)
     hasOutage: false,
-    outageStartDate: null,
-    outageStartTime: null,
-    outageEndDate: null,
-    outageEndTime: null,
+    outageStartDateTime: null,
+    outageEndDateTime: null,
     
     // Change Items (default: one empty item)
     changeItems: [createDefaultChangeItem()],
