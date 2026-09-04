@@ -15,11 +15,12 @@ A React-based web application for creating deployment notification artifacts (HT
 
 ## Quick Links
 
-- **[Developer Guide](./DEVELOPER_GUIDE.md)** - Setup, architecture, testing, and known limitations
+- **[Developer Guide](./docs/DEVELOPER_GUIDE.md)** - Setup, architecture, testing, and known limitations
+- **[Architecture](./docs/ARCHITECTURE.md)** - Technical architecture overview
+- **[Deployment Guide](./docs/DEPLOYMENT.md)** - Deployment instructions and hosting
+- **[Documentation Index](./docs/DOCUMENTATION_INDEX.md)** - Complete documentation reference
 - **[Design Document](/.kiro/specs/deployment-notification-generator/design.md)** - Architecture and component design
 - **[Requirements](/.kiro/specs/deployment-notification-generator/requirements.md)** - Feature requirements
-- **[Browser Compatibility](./BROWSER_COMPATIBILITY_TESTING_README.md)** - Cross-browser testing
-- **[Accessibility Guide](./ACCESSIBILITY_TESTING_GUIDE.md)** - WCAG 2.1 compliance
 
 ## Tech Stack
 
@@ -96,7 +97,7 @@ npm run test:e2e:debug
 | Edge | 90+ | ✅ Tested |
 | Internet Explorer | All | ❌ Not supported |
 
-See [BROWSER_COMPATIBILITY_REPORT.md](./BROWSER_COMPATIBILITY_REPORT.md) for detailed test results.
+
 
 ## Architecture
 
@@ -121,31 +122,32 @@ This project uses a **three-layer architecture**:
 - `OutputGenerator` - Artifact generation and delivery
 - Validation and formatting utilities in domain layer
 
-See [DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md) for detailed architecture documentation.
+See [docs/DEVELOPER_GUIDE.md](./docs/DEVELOPER_GUIDE.md) for detailed architecture documentation.
 
 ## Directory Structure
 
 ```
 src/
-├── components/      # React components + READMEs
+├── components/      # React components
 ├── data/            # Application catalog, form factory
 ├── hooks/           # Custom React hooks
 ├── types/           # TypeScript interfaces
 ├── utils/           # Validators, formatters, generators
 └── App.tsx
 
+docs/                # Documentation files
+
 public/
 └── templates/       # HTML templates (light, dark)
 
 e2e/                 # Playwright E2E tests
-cypress/             # Cypress E2E tests
 ```
 
 ## Documentation
 
 ### For Developers
 
-- **[DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md)** - Comprehensive guide covering:
+- **[docs/DEVELOPER_GUIDE.md](./docs/DEVELOPER_GUIDE.md)** - Comprehensive guide covering:
   - Project setup and build commands
   - Architecture and component structure
   - Testing approach and test commands
@@ -154,12 +156,9 @@ cypress/             # Cypress E2E tests
   - Deployment instructions
   - Troubleshooting
 
-### For Testing
-
-- **[BROWSER_COMPATIBILITY_TESTING_README.md](./BROWSER_COMPATIBILITY_TESTING_README.md)** - Browser testing guide
-- **[E2E_TEST_DOCUMENTATION.md](./E2E_TEST_DOCUMENTATION.md)** - E2E test documentation
-- **[ACCESSIBILITY_TESTING_GUIDE.md](./ACCESSIBILITY_TESTING_GUIDE.md)** - Accessibility testing
-- **[PERFORMANCE_OPTIMIZATIONS.md](./PERFORMANCE_OPTIMIZATIONS.md)** - Performance tuning
+- **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - Technical architecture overview
+- **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** - Deployment and hosting guide
+- **[docs/DOCUMENTATION_INDEX.md](./docs/DOCUMENTATION_INDEX.md)** - Complete documentation reference
 
 ### For Requirements
 
@@ -175,7 +174,7 @@ cypress/             # Cypress E2E tests
 - **Keyboard-Only Date Pickers**: Date/time pickers only accept mouse/touch input
 - **Template Customization**: HTML templates fixed (must rebuild to modify)
 
-See [DEVELOPER_GUIDE.md - Known Limitations](./DEVELOPER_GUIDE.md#known-limitations-and-open-items) for details.
+See [docs/DEVELOPER_GUIDE.md - Known Limitations](./docs/DEVELOPER_GUIDE.md#known-limitations-and-open-items) for details.
 
 ## Deployment
 
@@ -194,11 +193,11 @@ npm run build
 DEPLOY_BUCKET="my-bucket-name" npm run deploy
 ```
 
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
+See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) for detailed deployment instructions.
 
 ## Contributing
 
-1. See [DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md) for development setup
+1. See [docs/DEVELOPER_GUIDE.md](./docs/DEVELOPER_GUIDE.md) for development setup
 2. Follow TypeScript and React best practices
 3. Ensure all tests pass: `npm test && npm run test:e2e`
 4. Create descriptive commits referencing task numbers
@@ -208,8 +207,8 @@ See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
 
 For questions or issues:
 
-1. Check [DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md)
-2. Review component READMEs in `src/components/`
+1. See [docs/DEVELOPER_GUIDE.md](./docs/DEVELOPER_GUIDE.md)
+2. Review component source code in `src/components/`
 3. Check spec documentation in `.kiro/specs/`
 4. Review test files for usage examples
 

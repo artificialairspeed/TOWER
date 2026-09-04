@@ -79,6 +79,11 @@ export const APPLICATION_CATALOG: Application[] = [
     id: 'spt',
     name: 'SPT',
     notificationHeader: 'SPT Deployment Notification'
+  },
+  {
+    id: 'other',
+    name: 'Other',
+    notificationHeader: 'Other Deployment Notification'
   }
 ];
 

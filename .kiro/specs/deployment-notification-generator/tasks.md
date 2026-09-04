@@ -55,7 +55,7 @@ Implementation language: **TypeScript** with React 18, Material UI v5, html2pdf.
     - Email regex: standard pragmatic email pattern
     - _Requirements: 3.4, 8.2, 8.3_
 
-  - [~] 3.2 Write unit tests for field validators
+  - [x] 3.2 Write unit tests for field validators
     - Test email validation with valid/invalid formats, edge cases
     - Test phone validation with correct format, invalid formats
     - Test trimming with leading/trailing whitespace, embedded whitespace
@@ -305,7 +305,7 @@ Implementation language: **TypeScript** with React 18, Material UI v5, html2pdf.
     - Test item order preservation
     - _Requirements: 6.1-6.7, 7.1-7.8_
 
-- [ ] 12. Contact and theme components (presentation layer)
+- [x] 12. Contact and theme components (presentation layer)
   - [x] 12.1 Implement ContactSection component
     - Text input for Contact Name (max 255 chars, required)
     - Text input for Email (max 255 chars, required, format validation)
@@ -350,7 +350,7 @@ Implementation language: **TypeScript** with React 18, Material UI v5, html2pdf.
     - Wire up form manager hook and theme hook
     - _Requirements: 2.7, 2.8, 9.1, 9.2, 9.3_
 
-- [~] 14. Checkpoint - UI layer complete
+- [x] 14. Checkpoint - UI layer complete
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 15. Artifact generation (output layer)
@@ -446,7 +446,7 @@ Implementation language: **TypeScript** with React 18, Material UI v5, html2pdf.
     - Per-form generation failure message: "Generation failed for [form name]"
     - _Requirements: 10.8, 11.4, 13.3, 13.4_
 
-- [~] 18. Checkpoint - Full generation pipeline complete
+- [x] 18. Checkpoint - Full generation pipeline complete
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 19. Snapshot testing (presentation layer)
@@ -587,7 +587,7 @@ Implementation language: **TypeScript** with React 18, Material UI v5, html2pdf.
     - Document browser requirements
     - _Requirements: (developer documentation)_
 
-- [~] 23. Final checkpoint - Feature complete
+- [x] 23. Final checkpoint - Feature complete
   - Ensure all tests pass, ask the user if questions arise.
 
 
