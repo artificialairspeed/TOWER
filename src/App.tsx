@@ -14,7 +14,7 @@ import {
   CloudDownload as GenerateIcon,
 } from '@mui/icons-material';
 import { FormManager } from './components/FormManager';
-import { AppThemeProvider } from './theme/AppThemeProvider';
+import { AppThemeProvider, darkTokens } from './theme/AppThemeProvider';
 import { useValidationErrors } from './hooks/useValidationErrors';
 import { useFormManager } from './hooks/useFormManager';
 import { useOutputGenerator } from './hooks/useOutputGenerator';
@@ -204,6 +204,17 @@ function App() {
                 }
                 aria-busy={isGenerating}
                 data-testid="generate-outputs-button"
+                sx={{
+                  backgroundColor: darkTokens.swaYellow,
+                  color: darkTokens.swaYellowContrast,
+                  '& .MuiButton-startIcon': {
+                    color: darkTokens.swaYellowContrast,
+                  },
+                  '&:hover': {
+                    backgroundColor: darkTokens.swaYellowDark,
+                    boxShadow: `0 4px 12px rgba(255, 191, 0, 0.25)`,
+                  },
+                }}
               >
                 {isGenerating ? 'Generating...' : 'Generate Flight Plan'}
               </Button>

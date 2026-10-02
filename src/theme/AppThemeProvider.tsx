@@ -8,8 +8,9 @@
  * always renders the dark palette regardless of its value.
  *
  * Colors follow the Southwest Airlines "Jetstream" (V5+) design system: a deep
- * navy "steel" surface scale, SWA amber-yellow as the primary call-to-action
- * accent, and blue for secondary/outlined controls, links, and focus rings.
+ * navy "steel" surface scale and SWA blue as the primary accent for buttons,
+ * links, and focus rings. SWA amber-yellow is reserved exclusively for the
+ * single "Generate Flight Plan" call-to-action button.
  *
  * Font: Open Sans is the exclusive font family used throughout the entire application.
  * No other fonts are permitted anywhere in the UI.
@@ -38,11 +39,18 @@ export const darkTokens = {
   surfaceHover: 'rgb(52, 73, 94)', // steel400 — surface level 3 (hover / borders)
   divider: 'rgb(71, 99, 128)', // steel500 — subtle divider / border
 
-  // Brand primary accent — SWA amber-yellow (primary CTA, dark navy text on it)
-  primary: 'rgb(255, 191, 0)', // swaYellow500 (main)
-  primaryDark: 'rgb(255, 174, 0)', // swaYellow400 (dark / hover)
-  primaryLight: 'rgb(255, 204, 51)', // swaYellow600 (light)
-  primaryContrast: 'rgb(21, 39, 63)', // dark navy text on yellow
+  // Brand primary accent — SWA blue (primary buttons, accents, focus rings)
+  primary: 'rgb(25, 130, 230)', // blue500 (main)
+  primaryDark: 'rgb(20, 104, 184)', // blue400 (dark / hover)
+  primaryLight: 'rgb(71, 155, 235)', // blue600 (light)
+  primaryContrast: 'rgb(255, 255, 255)', // white text on blue
+
+  // SWA amber-yellow — reserved exclusively for the Generate Flight Plan CTA.
+  // No longer wired into palette.primary; kept as tokens for that one button.
+  swaYellow: 'rgb(255, 191, 0)', // swaYellow500 (main)
+  swaYellowDark: 'rgb(255, 174, 0)', // swaYellow400 (dark / hover)
+  swaYellowLight: 'rgb(255, 204, 51)', // swaYellow600 (light)
+  swaYellowContrast: 'rgb(21, 39, 63)', // dark navy text on yellow
 
   // Secondary accent — blue (secondary / outlined controls, links, focus rings)
   secondary: 'rgb(25, 130, 230)', // blue500 (main)
@@ -299,7 +307,7 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
               '&.MuiButton-contained': {
                 boxShadow: 'none',
                 '&:hover': {
-                  boxShadow: '0 4px 12px rgba(255, 191, 0, 0.25)',
+                  boxShadow: '0 4px 12px rgba(25, 130, 230, 0.25)',
                 },
               },
             },
