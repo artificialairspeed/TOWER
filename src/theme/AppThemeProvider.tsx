@@ -7,6 +7,10 @@
  * dark mode). The `theme` prop is retained for API compatibility, but the portal
  * always renders the dark palette regardless of its value.
  *
+ * Colors follow the Southwest Airlines "Jetstream" (V5+) design system: a deep
+ * navy "steel" surface scale, SWA amber-yellow as the primary call-to-action
+ * accent, and blue for secondary/outlined controls, links, and focus rings.
+ *
  * Font: Open Sans is the exclusive font family used throughout the entire application.
  * No other fonts are permitted anywhere in the UI.
  */
@@ -23,21 +27,37 @@ interface AppThemeProviderProps {
 
 // ---------------------------------------------------------------------------
 // Design tokens (single source of truth for the dark palette)
+//
+// Values come directly from the SWA Jetstream (V5+) color system.
 // ---------------------------------------------------------------------------
 export const darkTokens = {
-  bg: '#0a0e1a', // Deep navy app background
-  paper: '#131827', // Card / panel surface
-  paperElevated: '#1a2233', // Slightly raised surface (hover, nested)
-  primary: '#5b9dd9',
-  primaryLight: '#7ab3e3',
-  primaryDark: '#4a8bc7',
-  secondary: '#6c8a9e',
-  textPrimary: '#e8f0f7',
-  textSecondary: '#a2b5c8',
-  divider: '#263445',
-  actionHover: 'rgba(91, 157, 217, 0.08)',
-  actionSelected: 'rgba(91, 157, 217, 0.16)',
-  focusRing: '#7ab3e3',
+  // Core / surfaces — steel navy scale
+  bg: 'rgb(21, 39, 63)', // steel100 — darkest navy, app background
+  paper: 'rgb(33, 51, 70)', // steel200 — surface level 1 (cards, app bar)
+  paperElevated: 'rgb(43, 61, 79)', // steel300 — surface level 2 (raised / inputs)
+  surfaceHover: 'rgb(52, 73, 94)', // steel400 — surface level 3 (hover / borders)
+  divider: 'rgb(71, 99, 128)', // steel500 — subtle divider / border
+
+  // Brand primary accent — SWA amber-yellow (primary CTA, dark navy text on it)
+  primary: 'rgb(255, 191, 0)', // swaYellow500 (main)
+  primaryDark: 'rgb(255, 174, 0)', // swaYellow400 (dark / hover)
+  primaryLight: 'rgb(255, 204, 51)', // swaYellow600 (light)
+  primaryContrast: 'rgb(21, 39, 63)', // dark navy text on yellow
+
+  // Secondary accent — blue (secondary / outlined controls, links, focus rings)
+  secondary: 'rgb(25, 130, 230)', // blue500 (main)
+  secondaryDark: 'rgb(20, 104, 184)', // blue400 (dark)
+  secondaryLight: 'rgb(71, 155, 235)', // blue600 (light)
+
+  // Text
+  textPrimary: 'rgb(255, 255, 255)', // white
+  textSecondary: 'rgb(207, 217, 219)', // gray3 — muted
+  textDisabled: 'rgb(123, 139, 144)', // gray5
+
+  // Interaction states (derived from the blue accent)
+  actionHover: 'rgba(25, 130, 230, 0.08)',
+  actionSelected: 'rgba(25, 130, 230, 0.16)',
+  focusRing: 'rgb(71, 155, 235)', // blue600 (light)
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -45,7 +65,7 @@ export const darkTokens = {
 // ---------------------------------------------------------------------------
 // Open Sans is the exclusive font family for the entire application.
 // Fallback stack ensures Open Sans is used on all platforms.
-const OPEN_SANS_FONT_FAMILY = "'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+const OPEN_SANS_FONT_FAMILY = "'Open Sans', 'open-sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
 /**
  * AppThemeProvider component
@@ -66,13 +86,42 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
           main: darkTokens.primary,
           light: darkTokens.primaryLight,
           dark: darkTokens.primaryDark,
+          contrastText: darkTokens.primaryContrast,
         },
         secondary: {
           main: darkTokens.secondary,
+          light: darkTokens.secondaryLight,
+          dark: darkTokens.secondaryDark,
+          contrastText: darkTokens.textPrimary,
+        },
+        error: {
+          main: 'rgb(240, 117, 117)',
+          dark: 'rgb(138, 15, 15)',
+          light: 'rgb(250, 209, 209)',
+          contrastText: darkTokens.primaryContrast,
+        },
+        warning: {
+          main: 'rgb(250, 193, 107)',
+          dark: 'rgb(148, 91, 5)',
+          light: 'rgb(250, 193, 107)',
+          contrastText: darkTokens.primaryContrast,
+        },
+        success: {
+          main: 'rgb(140, 217, 145)',
+          dark: 'rgb(26, 76, 28)',
+          light: 'rgb(102, 204, 108)',
+          contrastText: darkTokens.primaryContrast,
+        },
+        info: {
+          main: 'rgb(131, 187, 241)',
+          dark: 'rgb(10, 52, 92)',
+          light: 'rgb(71, 155, 235)',
+          contrastText: darkTokens.primaryContrast,
         },
         text: {
           primary: darkTokens.textPrimary,
           secondary: darkTokens.textSecondary,
+          disabled: darkTokens.textDisabled,
         },
         divider: darkTokens.divider,
         action: {
@@ -85,6 +134,17 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
       },
       typography: {
         fontFamily: OPEN_SANS_FONT_FAMILY,
+        fontSize: 16,
+        fontWeightRegular: 400,
+        body1: {
+          fontFamily: OPEN_SANS_FONT_FAMILY,
+          fontSize: '1rem',
+          lineHeight: '24px',
+          fontWeight: 400,
+        },
+        body2: {
+          fontFamily: OPEN_SANS_FONT_FAMILY,
+        },
         // Override all typography variants to ensure Open Sans font
         h1: {
           fontFamily: OPEN_SANS_FONT_FAMILY,
@@ -102,12 +162,6 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
           fontFamily: OPEN_SANS_FONT_FAMILY,
         },
         h6: {
-          fontFamily: OPEN_SANS_FONT_FAMILY,
-        },
-        body1: {
-          fontFamily: OPEN_SANS_FONT_FAMILY,
-        },
-        body2: {
           fontFamily: OPEN_SANS_FONT_FAMILY,
         },
         subtitle1: {
@@ -131,12 +185,17 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
         // (WCAG 2.4.7) and a themed scrollbar.
         MuiCssBaseline: {
           styleOverrides: {
-            // Ensure Open Sans font on all elements
+            // Ensure Open Sans font + 16px / 24px body baseline on all elements
             html: {
               fontFamily: OPEN_SANS_FONT_FAMILY,
             },
             body: {
               fontFamily: OPEN_SANS_FONT_FAMILY,
+              fontSize: '16px',
+              lineHeight: '24px',
+              fontWeight: 400,
+              backgroundColor: darkTokens.bg,
+              color: darkTokens.textPrimary,
             },
             // Universal selector to guarantee no other fonts slip through
             '*': {
@@ -172,10 +231,19 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
             },
           },
         },
+        MuiAppBar: {
+          styleOverrides: {
+            root: {
+              backgroundColor: darkTokens.paper,
+              backgroundImage: 'none',
+            },
+          },
+        },
         MuiPaper: {
           styleOverrides: {
             root: {
               fontFamily: OPEN_SANS_FONT_FAMILY,
+              backgroundColor: darkTokens.paper,
               backgroundImage: 'none', // Remove MUI default elevation gradient
               transition:
                 'background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
@@ -188,15 +256,16 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
               fontFamily: OPEN_SANS_FONT_FAMILY,
               '& .MuiOutlinedInput-root': {
                 fontFamily: OPEN_SANS_FONT_FAMILY,
-                backgroundColor: darkTokens.bg,
+                backgroundColor: darkTokens.paperElevated,
+                color: darkTokens.textPrimary,
                 '& fieldset': {
                   borderColor: darkTokens.divider,
                 },
                 '&:hover fieldset': {
-                  borderColor: darkTokens.primary,
+                  borderColor: darkTokens.surfaceHover,
                 },
                 '&.Mui-focused fieldset': {
-                  borderColor: darkTokens.primary,
+                  borderColor: darkTokens.secondary,
                 },
                 '&.Mui-error fieldset': {
                   borderColor: 'currentColor', // Uses error color from FormControl
@@ -209,9 +278,13 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
               '& .MuiInputLabel-root': {
                 fontFamily: OPEN_SANS_FONT_FAMILY,
                 color: darkTokens.textSecondary,
+                '&.Mui-focused': {
+                  color: darkTokens.secondary,
+                },
               },
               '& .MuiInputBase-input': {
                 fontFamily: OPEN_SANS_FONT_FAMILY,
+                color: darkTokens.textPrimary,
               },
             },
           },
@@ -221,13 +294,23 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
             root: {
               fontFamily: OPEN_SANS_FONT_FAMILY,
               textTransform: 'none',
-              fontWeight: 500,
+              fontWeight: 600,
               borderRadius: 6,
               '&.MuiButton-contained': {
                 boxShadow: 'none',
                 '&:hover': {
-                  boxShadow: '0 4px 12px rgba(91, 157, 217, 0.25)',
+                  boxShadow: '0 4px 12px rgba(255, 191, 0, 0.25)',
                 },
+              },
+            },
+            // Secondary / outlined controls use the blue accent on a
+            // transparent fill (SWA Jetstream secondary buttons).
+            outlined: {
+              borderColor: darkTokens.secondaryLight,
+              color: darkTokens.secondaryLight,
+              '&:hover': {
+                borderColor: darkTokens.secondary,
+                backgroundColor: darkTokens.actionHover,
               },
             },
           },
