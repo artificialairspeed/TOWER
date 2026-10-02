@@ -133,10 +133,10 @@ export interface DeploymentFormData {
   application: Application | null;
   
   // ===== Deployment Information =====
-  /** Change number including CHG prefix (max 20 characters, required)
-   * Example: CHG12345
+  /** Change number digits only, up to 8 digits (CHG prefix is added at display time, required)
+   * Example: 12345 (rendered as CHG12345)
    */
-  changeNumber: string; // max 20 chars
+  changeNumber: string; // up to 8 digits
   
   /** Release version string (max 50 characters, required)
    * Example: v5.4.1

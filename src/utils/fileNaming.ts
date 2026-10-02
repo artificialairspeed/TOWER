@@ -8,6 +8,7 @@
  */
 
 import { DeploymentFormData } from '../types/models';
+import { formatChangeNumber } from './formatters';
 
 /**
  * Generates the base file name for deployment notification artifacts
@@ -25,7 +26,7 @@ import { DeploymentFormData } from '../types/models';
  * ```typescript
  * const data: DeploymentFormData = {
  *   application: { name: 'OQS SimLog', ... },
- *   changeNumber: 'CHG12345',
+ *   changeNumber: '12345',
  *   environment: 'PROD',
  *   startDateTime: new Date('2025-01-15'),
  *   ...
@@ -51,7 +52,9 @@ export function generateBaseFileName(data: DeploymentFormData): string | null {
   // Extract and format components
   const app = slugify(data.application.name);
   const env = slugify(data.environment);
-  const chg = slugify(data.changeNumber);
+  // CHG prefix is applied to the digits-only change number so the file name
+  // matches the on-screen/HTML title (e.g. "CHG12345")
+  const chg = slugify(formatChangeNumber(data.changeNumber));
   
   // Format deployment date as YYYYMMDD
   // Requirement: 12.2
@@ -80,8 +83,8 @@ export function generateBaseFileName(data: DeploymentFormData): string | null {
  * const forms = [form1, form2, form3];
  * const collisions = detectCollisions(forms);
  * // Returns: Map {
- * //   "CHG12345 | Crew Portal" => [form1, form2],
- * //   "CHG67890 | OQS SimLog" => [form3]
+ * //   "Crew_Portal_PROD_CHG12345_20250115" => [form1, form2],
+ * //   "OQS_SimLog_PROD_CHG67890_20250115" => [form3]
  * // }
  * ```
  * 
@@ -124,17 +127,17 @@ export function detectCollisions(forms: DeploymentFormData[]): Map<string, Deplo
  * @example
  * ```typescript
  * const forms = [
- *   { formId: 'form-2', application: { name: 'Crew Portal' }, changeNumber: 'CHG12345', ... },
- *   { formId: 'form-1', application: { name: 'Crew Portal' }, changeNumber: 'CHG12345', ... },
- *   { formId: 'form-3', application: { name: 'Crew Portal' }, changeNumber: 'CHG12345', ... },
- *   { formId: 'form-4', application: { name: 'OQS SimLog' }, changeNumber: 'CHG67890', ... }
+ *   { formId: 'form-2', application: { name: 'Crew Portal' }, changeNumber: '12345', ... },
+ *   { formId: 'form-1', application: { name: 'Crew Portal' }, changeNumber: '12345', ... },
+ *   { formId: 'form-3', application: { name: 'Crew Portal' }, changeNumber: '12345', ... },
+ *   { formId: 'form-4', application: { name: 'OQS SimLog' }, changeNumber: '67890', ... }
  * ];
  * const fileNames = disambiguateFileNames(forms);
  * // Returns: Map {
- * //   'form-1' => 'CHG12345 | Crew Portal',       // first (no suffix)
- * //   'form-2' => 'CHG12345 | Crew Portal-1',     // second
- * //   'form-3' => 'CHG12345 | Crew Portal-2',     // third
- * //   'form-4' => 'CHG67890 | OQS SimLog'         // no collision
+ * //   'form-1' => 'Crew_Portal_PROD_CHG12345_20250115',       // first (no suffix)
+ * //   'form-2' => 'Crew_Portal_PROD_CHG12345_20250115-1',     // second
+ * //   'form-3' => 'Crew_Portal_PROD_CHG12345_20250115-2',     // third
+ * //   'form-4' => 'OQS_SimLog_PROD_CHG67890_20250115'         // no collision
  * // }
  * ```
  * 

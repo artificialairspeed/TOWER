@@ -44,6 +44,31 @@ export function formatPhoneNumber(phone: string): string {
 }
 
 // ============================================================================
+// Change Number Formatting
+// ============================================================================
+
+/**
+ * Applies the "CHG" display prefix to a stored change number.
+ *
+ * The change number is stored as digits only (up to 8 digits); the "CHG"
+ * prefix is a display adornment applied consistently wherever the change
+ * number is shown or exported (title, HTML artifact, file name, queue row).
+ *
+ * An empty value is returned unchanged so callers can decide how to render
+ * the "not set" case.
+ *
+ * @param changeNumber - The stored change number (digits only), e.g. "12345"
+ * @returns The change number with the CHG prefix, e.g. "CHG12345", or '' when empty
+ *
+ * @example
+ * formatChangeNumber('12345') // Returns: "CHG12345"
+ * formatChangeNumber('')      // Returns: ""
+ */
+export function formatChangeNumber(changeNumber: string): string {
+  return changeNumber ? `CHG${changeNumber}` : '';
+}
+
+// ============================================================================
 // Title Generation Functions
 // ============================================================================
 
@@ -65,7 +90,7 @@ export function formatPhoneNumber(phone: string): string {
  * @example
  * generateDeploymentTitle({
  *   application: { name: 'Crew Portal', ... },
- *   changeNumber: 'CHG12345',
+ *   changeNumber: '12345',
  *   releaseVersion: 'v5.4.1',
  *   environment: 'PROD',
  *   ...
@@ -82,9 +107,9 @@ export function generateDeploymentTitle(data: DeploymentFormData): string {
   const applicationName = data.application.name;
   
   // Build the title in the required format (without environment)
-  // CHG prefix is appended to the Change Number for display
+  // CHG prefix is applied to the Change Number for display
   // PI is shown in the notification header, so not repeated here
-  return `CHG${data.changeNumber} — ${applicationName}`;
+  return `${formatChangeNumber(data.changeNumber)} — ${applicationName}`;
 }
 
 /**
@@ -354,7 +379,7 @@ export function renderOutageIndicator(hasOutage: boolean): string {
  * const template = '<h1>{{NOTIFICATION_HEADER}}</h1><p>{{DEPLOYMENT_TITLE}}</p>';
  * const data = {
  *   application: { name: 'Crew Portal', notificationHeader: 'Crew Portal Deployment' },
- *   changeNumber: 'CHG12345',
+ *   changeNumber: '12345',
  *   releaseVersion: 'v5.4.1',
  *   environment: 'PROD',
  *   // ... other fields
@@ -387,8 +412,8 @@ export function injectTemplate(template: string, data: DeploymentFormData): stri
   const impactItemsHtml = renderImpactItems(data.impactItems);
   
   // Escape text tokens for security
-  // CHG prefix is appended to the Change Number for HTML output display
-  const escapedChangeNumber = escapeHtml(`CHG${data.changeNumber}`);
+  // CHG prefix is applied to the Change Number for HTML output display
+  const escapedChangeNumber = escapeHtml(formatChangeNumber(data.changeNumber));
   const escapedContactName = escapeHtml(data.contactName);
   const escapedContactEmail = escapeHtml(data.contactEmail);
   const escapedContactPhone = escapeHtml(data.contactPhone);

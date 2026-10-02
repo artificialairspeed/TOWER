@@ -116,8 +116,8 @@ export function validateFieldOnBlur(
       return undefined;
 
     case 'changeNumber':
-      if (!isWithinLength(value, 20)) {
-        return 'Change Number must not exceed 20 characters';
+      if (!/^\d{1,8}$/.test(trimmed)) {
+        return 'Change Number must be up to 8 digits';
       }
       return undefined;
 
@@ -175,11 +175,11 @@ export function validateForm(data: DeploymentFormData): ValidationResult {
       field: 'changeNumber',
       message: 'Change Number is required'
     });
-  } else if (!isWithinLength(data.changeNumber, 20)) {
+  } else if (!/^\d{1,8}$/.test(data.changeNumber.trim())) {
     errors.push({
       formId: data.formId,
       field: 'changeNumber',
-      message: 'Change Number must not exceed 20 characters'
+      message: 'Change Number must be up to 8 digits'
     });
   }
 

@@ -12,7 +12,7 @@ import { APPLICATION_CATALOG, DeploymentFormData } from '../types/models';
 const exampleFormData: DeploymentFormData = {
   formId: 'form-1',
   application: APPLICATION_CATALOG[0] ?? null, // AO Crew Training
-  changeNumber: 'CHG12345',
+  changeNumber: '12345',
   releaseVersion: 'v5.4.1',
   environment: 'PROD',
   deploymentTitle: '', // This would be computed

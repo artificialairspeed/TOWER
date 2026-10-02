@@ -44,7 +44,7 @@ function mapThemeToTemplate(theme: Theme): 'light' | 'dark' {
  * const formData: DeploymentFormData = {
  *   formId: '1',
  *   application: { id: 'crew-portal', name: 'Crew Portal', notificationHeader: '...' },
- *   changeNumber: 'CHG12345',
+ *   changeNumber: '12345',
  *   releaseVersion: 'v5.4.1',
  *   environment: 'PROD',
  *   // ... other fields

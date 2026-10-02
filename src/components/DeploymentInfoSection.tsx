@@ -2,7 +2,7 @@
  * DeploymentInfoSection Component
  * 
  * Provides input controls for core deployment identifiers:
- * - Change Number (max 20 chars, required, auto-trim on blur)
+ * - Change Number (exactly 8 digits max, numeric only, required, auto-trim on blur)
  * - Release Version (max 50 chars, required, auto-trim on blur)
  * - Environment dropdown (PROD/QA/ITEST/DEV, none default, required)
  * 
@@ -124,12 +124,14 @@ function DeploymentInfoSectionComponent({
           required
           label="Change Number"
           value={changeNumber}
-          onChange={(e) => onChangeNumberChange(e.target.value)}
+          onChange={(e) => onChangeNumberChange(e.target.value.replace(/\D/g, '').slice(0, 8))}
           onBlur={handleChangeNumberBlur}
           error={!!changeNumberError}
           slotProps={{
             htmlInput: {
-              maxLength: 20,
+              maxLength: 8,
+              inputMode: 'numeric',
+              pattern: '[0-9]*',
               'aria-label': 'Change number',
               'aria-describedby': changeNumberError ? 'change-number-error' : 'change-number-help',
               'aria-invalid': !!changeNumberError

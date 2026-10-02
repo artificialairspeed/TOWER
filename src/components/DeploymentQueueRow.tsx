@@ -29,6 +29,7 @@ import {
 } from '@mui/icons-material';
 import type { DeploymentFormData, ValidationError } from '../types/models';
 import { DeploymentForm } from './DeploymentForm';
+import { formatChangeNumber } from '../utils/formatters';
 
 export interface DeploymentQueueRowProps {
   /** The deployment form data */
@@ -149,7 +150,7 @@ function DeploymentQueueRowComponent({
         }}
         aria-expanded={isExpanded}
         aria-label={`Deployment ${position}: ${appName} to ${environment}. Change: ${
-          formData.changeNumber || 'Not set'
+          formatChangeNumber(formData.changeNumber) || 'Not set'
         }, Version: ${formData.releaseVersion || 'Not set'}. ${
           isExpanded ? 'Collapse' : 'Expand'
         } to ${isExpanded ? 'hide' : 'show'} details.`}
@@ -229,7 +230,7 @@ function DeploymentQueueRowComponent({
               Change Number
             </Typography>
             <Typography variant="body2" color="text.primary">
-              {formData.changeNumber || 'Not set'}
+              {formatChangeNumber(formData.changeNumber) || 'Not set'}
             </Typography>
           </Box>
 

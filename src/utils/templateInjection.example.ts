@@ -19,7 +19,7 @@ const exampleApp: Application = {
 const exampleData: DeploymentFormData = {
   formId: 'example-1',
   application: exampleApp,
-  changeNumber: 'CHG12345',
+  changeNumber: '12345',
   releaseVersion: 'v5.4.1',
   environment: 'PROD',
   deploymentTitle: '[CHG12345] — [Crew Portal: v5.4.1 - Deploy to PROD]',
