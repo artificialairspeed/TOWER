@@ -18,6 +18,7 @@
 
 import React from 'react';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import type { Theme } from '../types/models';
 
 interface AppThemeProviderProps {
@@ -314,7 +315,9 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
               '&.MuiButton-contained': {
                 boxShadow: 'none',
                 '&:hover': {
-                  boxShadow: '0 4px 12px rgba(25, 130, 230, 0.25)',
+                  // Shadow tint composed from the brand blue token so the
+                  // accent colour stays single-sourced from darkTokens.
+                  boxShadow: `0 4px 12px ${alpha(darkTokens.primary, 0.25)}`,
                 },
               },
             },
