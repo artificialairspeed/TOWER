@@ -128,6 +128,11 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
           light: 'rgb(102, 204, 108)',
           contrastText: darkTokens.primaryContrast,
         },
+        // Informational blue — deliberately independent of the brand accent.
+        // These are raw literals on purpose: they must NOT be sourced from
+        // darkTokens.primary* / accent*. `light` currently happens to equal
+        // blue600, but that coincidence must not be collapsed into a token —
+        // the informational scale is free to diverge from the brand blue.
         info: {
           main: 'rgb(131, 187, 241)',
           dark: 'rgb(10, 52, 92)',
