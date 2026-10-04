@@ -57,6 +57,13 @@ export const darkTokens = {
   secondaryDark: 'rgb(20, 104, 184)', // blue400 (dark)
   secondaryLight: 'rgb(71, 155, 235)', // blue600 (light)
 
+  // SWA blue "accent" — same blue500/blue600 values as primary/secondary above,
+  // kept as a distinct semantic alias for parity with the generated flight-plan
+  // template (public/templates/flight-plan.html --accent / --accent-hover),
+  // which uses this blue specifically for labels, links, and Jira numbers.
+  accent: 'rgb(25, 130, 230)', // blue500 — labels, links, Jira numbers
+  accentHover: 'rgb(71, 155, 235)', // blue600 — link hover
+
   // Text
   textPrimary: 'rgb(255, 255, 255)', // white
   textSecondary: 'rgb(207, 217, 219)', // gray3 — muted
