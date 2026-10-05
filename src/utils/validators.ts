@@ -8,6 +8,31 @@
  */
 
 /**
+ * Shared validation messages.
+ *
+ * The blur-time validator (validateFieldOnBlur) and the submit-time validator
+ * (validateForm) must report the same wording for the same rule, so each
+ * message lives here exactly once.
+ *
+ * Note: ValidationErrorSummary pattern-matches on the phrases 'is required'
+ * and 'Please select' to collapse them into "This field is required". Those
+ * two phrasings must not change.
+ */
+const MESSAGES = {
+  emailFormat: 'Please enter a valid email address (example@domain.com)',
+  phoneFormat: 'Phone must be exactly 10 digits in format (###) ###-####',
+  changeNumberFormat: 'Change Number must be up to 8 digits',
+  releaseVersionFormat: 'Release Version must be in format YYYY.#.# (e.g. 2025.4.1)',
+  maxLength: (label: string, max: number) => `${label} must not exceed ${max} characters`
+} as const;
+
+/** Maximum length shared by every free-text contact field. */
+const MAX_TEXT_LENGTH = 255;
+
+/** Change number: 1-8 digits, no CHG prefix (the prefix is a display adornment). */
+const CHANGE_NUMBER_PATTERN = /^\d{1,8}$/;
+
+/**
  * Validates email address format using standard pragmatic email pattern.
  * 
  * @param email - Email address to validate
@@ -35,6 +60,22 @@ export function isValidPhone(phone: string): boolean {
   // Phone format: (###) ###-####
   const phoneRegex = /^\(\d{3}\) \d{3}-\d{4}$/;
   return phoneRegex.test(phone);
+}
+
+/**
+ * Validates release version format.
+ * Expected format: YYYY.#.# (4-digit year, single-digit minor, single-digit patch)
+ *
+ * @param releaseVersion - Release version to validate
+ * @returns true if it matches the required format, false otherwise
+ *
+ * @example
+ * isValidReleaseVersion('2025.4.1') // true
+ * isValidReleaseVersion('2025.4')   // false
+ */
+export function isValidReleaseVersion(releaseVersion: string): boolean {
+  const releaseVersionRegex = /^\d{4}\.\d\.\d$/;
+  return releaseVersionRegex.test(releaseVersion);
 }
 
 /**
@@ -92,38 +133,38 @@ export function validateFieldOnBlur(
 
   switch (field) {
     case 'contactEmail':
-      if (!isWithinLength(value, 255)) {
-        return 'Email must not exceed 255 characters';
+      if (!isWithinLength(value, MAX_TEXT_LENGTH)) {
+        return MESSAGES.maxLength('Email', MAX_TEXT_LENGTH);
       }
       if (!isValidEmail(trimmed)) {
-        return 'Please enter a valid email address (example@domain.com)';
+        return MESSAGES.emailFormat;
       }
       return undefined;
 
     case 'contactPhone':
-      if (!isWithinLength(value, 255)) {
-        return 'Phone must not exceed 255 characters';
+      if (!isWithinLength(value, MAX_TEXT_LENGTH)) {
+        return MESSAGES.maxLength('Phone', MAX_TEXT_LENGTH);
       }
-      if (value && !isValidPhone(value)) {
-        return 'Phone must be exactly 10 digits in format (###) ###-####';
+      if (!isValidPhone(value)) {
+        return MESSAGES.phoneFormat;
       }
       return undefined;
 
     case 'contactName':
-      if (!isWithinLength(value, 255)) {
-        return 'Contact Name must not exceed 255 characters';
+      if (!isWithinLength(value, MAX_TEXT_LENGTH)) {
+        return MESSAGES.maxLength('Contact Name', MAX_TEXT_LENGTH);
       }
       return undefined;
 
     case 'changeNumber':
-      if (!/^\d{1,8}$/.test(trimmed)) {
-        return 'Change Number must be up to 8 digits';
+      if (!CHANGE_NUMBER_PATTERN.test(trimmed)) {
+        return MESSAGES.changeNumberFormat;
       }
       return undefined;
 
     case 'releaseVersion':
-      if (!isWithinLength(value, 50)) {
-        return 'Release Version must not exceed 50 characters';
+      if (!isValidReleaseVersion(trimmed)) {
+        return MESSAGES.releaseVersionFormat;
       }
       return undefined;
 
@@ -146,7 +187,7 @@ import type { DeploymentFormData, ValidationResult, ValidationError } from '../t
  * - Field format validation (email, phone)
  * - Time ordering constraints (end > start)
  * - Outage logic validation
- * - List count constraints (Change Items: 1-999, Impact Items: 1-100)
+ * - List count constraints (Change Items: 1-999; Impact Items: 0-100 per change item)
  * - List item content validation
  * 
  * The function is non-destructive: it never mutates the input data.
@@ -175,11 +216,11 @@ export function validateForm(data: DeploymentFormData): ValidationResult {
       field: 'changeNumber',
       message: 'Change Number is required'
     });
-  } else if (!/^\d{1,8}$/.test(data.changeNumber.trim())) {
+  } else if (!CHANGE_NUMBER_PATTERN.test(data.changeNumber.trim())) {
     errors.push({
       formId: data.formId,
       field: 'changeNumber',
-      message: 'Change Number must be up to 8 digits'
+      message: MESSAGES.changeNumberFormat
     });
   }
 
@@ -189,11 +230,11 @@ export function validateForm(data: DeploymentFormData): ValidationResult {
       field: 'releaseVersion',
       message: 'Release Version is required'
     });
-  } else if (!isWithinLength(data.releaseVersion, 50)) {
+  } else if (!isValidReleaseVersion(data.releaseVersion.trim())) {
     errors.push({
       formId: data.formId,
       field: 'releaseVersion',
-      message: 'Release Version must not exceed 50 characters'
+      message: MESSAGES.releaseVersionFormat
     });
   }
 
@@ -261,7 +302,7 @@ export function validateForm(data: DeploymentFormData): ValidationResult {
       errors.push({
         formId: data.formId,
         field: `changeItems[${index}].jiraNumber`,
-        message: `Change Item ${index + 1}: Jira Number must not exceed 50 characters`
+        message: `Change Item ${index + 1}: ${MESSAGES.maxLength('Jira Number', 50)}`
       });
     }
 
@@ -275,41 +316,38 @@ export function validateForm(data: DeploymentFormData): ValidationResult {
       errors.push({
         formId: data.formId,
         field: `changeItems[${index}].description`,
-        message: `Change Item ${index + 1}: Title/Description must not exceed 500 characters`
+        message: `Change Item ${index + 1}: ${MESSAGES.maxLength('Title/Description', 500)}`
       });
     }
-  });
 
-  // ===== Impact Items (Requirements 7.3-7.7) =====
-  if (data.impactItems.length === 0) {
-    errors.push({
-      formId: data.formId,
-      field: 'impactItems',
-      message: 'At least one Impact Item is required'
-    });
-  } else if (data.impactItems.length > 100) {
-    errors.push({
-      formId: data.formId,
-      field: 'impactItems',
-      message: 'Maximum of 100 Impact Items allowed'
-    });
-  }
+    // ===== Impact Items for this Change Item (Requirements 7.3-7.7) =====
+    // Impact items are optional children of a change item: zero is valid.
+    // Only a per-change-item maximum and per-item content rules apply.
+    const impactItems = item.impactItems ?? [];
 
-  // Validate each Impact Item
-  data.impactItems.forEach((item, index) => {
-    if (!isNonEmpty(item.text)) {
+    if (impactItems.length > 100) {
       errors.push({
         formId: data.formId,
-        field: `impactItems[${index}].text`,
-        message: `Impact Item ${index + 1}: Text is required`
-      });
-    } else if (!isWithinLength(item.text, 500)) {
-      errors.push({
-        formId: data.formId,
-        field: `impactItems[${index}].text`,
-        message: `Impact Item ${index + 1}: Text must not exceed 500 characters`
+        field: `changeItems[${index}].impactItems`,
+        message: `Change Item ${index + 1}: Maximum of 100 Impact Items allowed`
       });
     }
+
+    impactItems.forEach((impact, impactIndex) => {
+      if (!isNonEmpty(impact.text)) {
+        errors.push({
+          formId: data.formId,
+          field: `changeItems[${index}].impactItems[${impactIndex}].text`,
+          message: `Change Item ${index + 1}, Impact ${impactIndex + 1}: Text is required`
+        });
+      } else if (!isWithinLength(impact.text, 500)) {
+        errors.push({
+          formId: data.formId,
+          field: `changeItems[${index}].impactItems[${impactIndex}].text`,
+          message: `Change Item ${index + 1}, Impact ${impactIndex + 1}: ${MESSAGES.maxLength('Text', 500)}`
+        });
+      }
+    });
   });
 
   // ===== Contact Information (Requirements 8.1-8.5) =====
@@ -319,11 +357,11 @@ export function validateForm(data: DeploymentFormData): ValidationResult {
       field: 'contactName',
       message: 'Contact Name is required'
     });
-  } else if (!isWithinLength(data.contactName, 255)) {
+  } else if (!isWithinLength(data.contactName, MAX_TEXT_LENGTH)) {
     errors.push({
       formId: data.formId,
       field: 'contactName',
-      message: 'Contact Name must not exceed 255 characters'
+      message: MESSAGES.maxLength('Contact Name', MAX_TEXT_LENGTH)
     });
   }
 
@@ -333,38 +371,35 @@ export function validateForm(data: DeploymentFormData): ValidationResult {
       field: 'contactEmail',
       message: 'Email is required'
     });
-  } else if (!isWithinLength(data.contactEmail, 255)) {
+  } else if (!isWithinLength(data.contactEmail, MAX_TEXT_LENGTH)) {
     errors.push({
       formId: data.formId,
       field: 'contactEmail',
-      message: 'Email must not exceed 255 characters'
+      message: MESSAGES.maxLength('Email', MAX_TEXT_LENGTH)
     });
   } else if (!isValidEmail(data.contactEmail)) {
     errors.push({
       formId: data.formId,
       field: 'contactEmail',
-      message: 'Please enter a valid email address (example@domain.com)'
+      message: MESSAGES.emailFormat
     });
   }
 
-  if (!isNonEmpty(data.contactPhone)) {
-    errors.push({
-      formId: data.formId,
-      field: 'contactPhone',
-      message: 'Phone is required'
-    });
-  } else if (!isWithinLength(data.contactPhone, 255)) {
-    errors.push({
-      formId: data.formId,
-      field: 'contactPhone',
-      message: 'Phone must not exceed 255 characters'
-    });
-  } else if (!isValidPhone(data.contactPhone)) {
-    errors.push({
-      formId: data.formId,
-      field: 'contactPhone',
-      message: 'Phone must be exactly 10 digits in format (###) ###-####'
-    });
+  // Phone is optional. Only validate length/format when a value was provided.
+  if (isNonEmpty(data.contactPhone)) {
+    if (!isWithinLength(data.contactPhone, MAX_TEXT_LENGTH)) {
+      errors.push({
+        formId: data.formId,
+        field: 'contactPhone',
+        message: MESSAGES.maxLength('Phone', MAX_TEXT_LENGTH)
+      });
+    } else if (!isValidPhone(data.contactPhone)) {
+      errors.push({
+        formId: data.formId,
+        field: 'contactPhone',
+        message: MESSAGES.phoneFormat
+      });
+    }
   }
 
   // Return validation result
@@ -375,43 +410,29 @@ export function validateForm(data: DeploymentFormData): ValidationResult {
 }
 
 // ============================================================================
-// Batch Validation
+// Generation Validation
 // ============================================================================
 
-import type { Theme } from '../types/models';
-
 /**
- * Validates all deployment forms in a batch before generation.
- * 
- * This function serves as the gate for batch output generation. It performs:
- * 1. Individual form validation on every form using validateForm
- * 2. Theme selection check (theme must be selected)
- * 3. Application catalog check (catalog must be non-empty)
- * 
- * An empty error array indicates that the batch is ready to generate outputs.
- * 
- * @param forms - Array of deployment forms to validate
- * @param theme - Currently selected theme (null if not selected)
+ * Validates the deployment form before generation.
+ *
+ * This function serves as the gate for output generation. It performs:
+ * 1. Application catalog check (catalog must be non-empty)
+ * 2. Form field validation using validateForm
+ *
+ * An empty error array indicates that the form is ready to generate outputs.
+ *
+ * @param form - Deployment form to validate
  * @param catalogEmpty - Whether the application catalog is empty
- * @returns ValidationResult with aggregated errors across all forms and session-level checks
- * 
- * Requirements: 2.3, 2.8, 9.4, 10.2, 10.3
+ * @returns ValidationResult with form errors and session-level checks
+ *
+ * Requirements: 2.3, 2.8, 10.2, 10.3
  */
-export function validateBatch(
-  forms: DeploymentFormData[],
-  theme: Theme | null,
+export function validateForGeneration(
+  form: DeploymentFormData,
   catalogEmpty: boolean
 ): ValidationResult {
   const errors: ValidationError[] = [];
-
-  // ===== Theme Selection Check (Requirement 9.4) =====
-  if (!theme) {
-    errors.push({
-      formId: '_session',
-      field: 'theme',
-      message: 'Please select a theme (Light Mode or Dark Mode) before generating outputs'
-    });
-  }
 
   // ===== Application Catalog Check (Requirements 2.8) =====
   if (catalogEmpty) {
@@ -422,18 +443,13 @@ export function validateBatch(
     });
   }
 
-  // ===== Validate Each Form (Requirements 10.2, 10.3) =====
-  // Run validateForm on every form and aggregate all errors
-  forms.forEach(form => {
-    const formValidation = validateForm(form);
-    if (!formValidation.isValid) {
-      // Aggregate errors from this form into the batch result
-      errors.push(...formValidation.errors);
-    }
-  });
+  // ===== Validate the Form (Requirements 10.2, 10.3) =====
+  const formValidation = validateForm(form);
+  if (!formValidation.isValid) {
+    errors.push(...formValidation.errors);
+  }
 
-  // Return aggregated validation result
-  // Empty error array means batch may proceed to generation
+  // Return validation result. Empty error array means generation may proceed.
   return {
     isValid: errors.length === 0,
     errors

@@ -5,8 +5,7 @@
  * - ApplicationSelector
  * - DeploymentInfoSection
  * - ScheduleSection (includes outage indicator Yes/No radio button on the right)
- * - ChangeItemsSection
- * - ImpactSection
+ * - ChangeItemsSection (each change item owns its nested impact items)
  * - ContactSection
  * 
  * Always expanded (no collapse functionality)
@@ -18,7 +17,6 @@ import React from 'react';
 import {
   Box,
   Stack,
-  Divider,
   Typography
 } from '@mui/material';
 import type { DeploymentFormData, ValidationError } from '../types/models';
@@ -26,15 +24,12 @@ import { ApplicationSelector } from './ApplicationSelector';
 import { DeploymentInfoSection } from './DeploymentInfoSection';
 import { ScheduleSection } from './ScheduleSection';
 import { ChangeItemsSection } from './ChangeItemsSection';
-import { ImpactSection } from './ImpactSection';
 import { ContactSection } from './ContactSection';
 import { ValidationErrorSummary } from './ValidationErrorSummary';
 
 export interface DeploymentFormProps {
   /** The deployment form data */
   formData: DeploymentFormData;
-  /** Form number for display (1-indexed) */
-  formNumber: number;
   /** Callback when form data is updated */
   onUpdate: (updates: Partial<DeploymentFormData>) => void;
   /** Validation errors for this form */
@@ -58,7 +53,6 @@ export interface DeploymentFormProps {
  */
 function DeploymentFormComponent({
   formData,
-  formNumber,
   onUpdate,
   validationErrors = [],
   onClearFieldError,
@@ -85,6 +79,41 @@ function DeploymentFormComponent({
     }
   };
 
+  /**
+   * Split the keyed per-item validation errors out of the flat error list so
+   * ChangeItemsSection and the nested ImpactSection can render them next to the
+   * field they belong to.
+   *
+   * `validateForm` emits `changeItems[i].jiraNumber`, `changeItems[i].description`
+   * and `changeItems[i].impactItems[j].text`. ChangeItemsSection looks errors up
+   * by change-item **id**, so the index in the path is mapped back to the id;
+   * ImpactSection looks its errors up by the verbatim nested path.
+   */
+  const { changeItemErrors, impactErrors } = React.useMemo(() => {
+    const itemErrors: Record<string, { jiraNumber?: string; description?: string }> = {};
+    const nestedErrors: Record<string, string> = {};
+
+    for (const error of validationErrors) {
+      const itemMatch = /^changeItems\[(\d+)\]\.(jiraNumber|description)$/.exec(error.field);
+      if (itemMatch) {
+        const item = formData.changeItems[Number(itemMatch[1])];
+        if (item) {
+          itemErrors[item.id] = {
+            ...itemErrors[item.id],
+            [itemMatch[2] as 'jiraNumber' | 'description']: error.message
+          };
+        }
+        continue;
+      }
+
+      if (/^changeItems\[\d+\]\.impactItems\[\d+\]\.text$/.test(error.field)) {
+        nestedErrors[error.field] = error.message;
+      }
+    }
+
+    return { changeItemErrors: itemErrors, impactErrors: nestedErrors };
+  }, [validationErrors, formData.changeItems]);
+
   return (
     <Box
       sx={{ 
@@ -97,18 +126,13 @@ function DeploymentFormComponent({
         })
       }}
       component="section"
-      aria-labelledby={`form-${formData.formId}-heading`}
+      aria-label="Deployment details"
       aria-describedby={hasErrors ? `form-${formData.formId}-errors` : undefined}
     >
-      {/* Form Header with Actions */}
-      {/* Reset and Remove buttons removed per user request */}
-
-      <Divider sx={{ mb: 3 }} />
-
       {/* Validation Error Summary - Display per-form summary errors */}
       {hasErrors && (
         <Box id={`form-${formData.formId}-errors`}>
-          <ValidationErrorSummary errors={validationErrors} formNumber={formNumber} />
+          <ValidationErrorSummary errors={validationErrors} />
         </Box>
       )}
 
@@ -200,16 +224,13 @@ function DeploymentFormComponent({
           onHasOutageChange={(value) => handleFieldUpdate({ hasOutage: value }, 'hasOutage')}
         />
 
-        {/* Change Items Section */}
+        {/* Change Items Section (each change item owns its nested impact items) */}
         <ChangeItemsSection
           changeItems={formData.changeItems}
           onChange={(value) => handleFieldUpdate({ changeItems: value }, 'changeItems')}
-        />
-
-        {/* Impact Section */}
-        <ImpactSection
-          impactItems={formData.impactItems}
-          onImpactItemsChange={(value) => handleFieldUpdate({ impactItems: value }, 'impactItems')}
+          errors={changeItemErrors}
+          impactErrors={impactErrors}
+          sectionError={getFieldError('changeItems')}
         />
 
         {/* Contact Section */}

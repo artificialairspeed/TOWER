@@ -1,5 +1,14 @@
 # Requirements Document
 
+> **Superseded — historical reference only.** This spec describes the original
+> Deployment Notification Generator Portal: up to five simultaneous forms, a
+> Light/Dark theme selector, HTML + PDF + PNG artifacts, and a computed
+> Deployment_Title. None of that is the shipped application. Current intended
+> behaviour lives in `.kiro/specs/flight-plan-redesign/`, which replaced the two
+> themed templates with a single dark Flight Plan template; the shipped app
+> manages exactly one form and produces exactly one PNG. Read this document for
+> the original requirement intent, not for how TOWER behaves today.
+
 ## Introduction
 
 The Deployment Notification Generator Portal is a lightweight, single-user, browser-based web application that enables a deployment coordinator to enter deployment metadata through guided forms and generate deployment notification artifacts in HTML, PDF, and PNG formats. The portal operates entirely client-side: it has no authentication, no server-side persistence, and no back-end integrations. Notification artifacts are produced by populating existing Light Mode and Dark Mode HTML templates with user-supplied data.

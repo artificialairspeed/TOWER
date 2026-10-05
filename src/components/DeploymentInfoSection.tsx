@@ -3,9 +3,14 @@
  * 
  * Provides input controls for core deployment identifiers:
  * - Change Number (exactly 8 digits max, numeric only, required, auto-trim on blur)
- * - Release Version (max 50 chars, required, auto-trim on blur)
+ * - Release Version (masked as YYYY.#.# while typing, required, auto-trim on blur)
  * - Environment dropdown (PROD/QA/ITEST/DEV, none default, required)
- * 
+ *
+ * Exactly one of `changeNumberOnly`, `releaseVersionOnly` or `environmentOnly`
+ * must be set: DeploymentForm renders one instance per field so the four
+ * deployment-information controls can share a single row. The heading above the
+ * row is owned by DeploymentForm.
+ *
  * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5
  */
 
@@ -18,10 +23,10 @@ import {
   MenuItem,
   FormHelperText,
   Box,
-  Typography,
   InputAdornment
 } from '@mui/material';
-import { Environment } from '../types/models';
+import type { Environment } from '../types/models';
+import { formatReleaseVersion } from '../utils/formatters';
 
 export interface DeploymentInfoSectionProps {
   /** Current change number value */
@@ -44,11 +49,11 @@ export interface DeploymentInfoSectionProps {
   environmentError?: string;
   /** Callback for onBlur field validation (field, value) */
   onBlurValidate?: (field: string, value: string) => void;
-  /** If true, only render the environment field (for same-row layout) */
+  /** Render only the environment field (for the same-row layout) */
   environmentOnly?: boolean;
-  /** If true, only render the change number field (for same-row layout) */
+  /** Render only the change number field (for the same-row layout) */
   changeNumberOnly?: boolean;
-  /** If true, only render the release version field (for same-row layout) */
+  /** Render only the release version field (for the same-row layout) */
   releaseVersionOnly?: boolean;
 }
 
@@ -110,70 +115,94 @@ function DeploymentInfoSectionComponent({
   };
 
   return (
-    <Box sx={{ mb: environmentOnly || changeNumberOnly || releaseVersionOnly ? 0 : 3 }} component={environmentOnly || changeNumberOnly || releaseVersionOnly ? 'div' : 'section'} aria-labelledby={environmentOnly || changeNumberOnly || releaseVersionOnly ? undefined : "deployment-info-heading"}>
-      {!environmentOnly && !changeNumberOnly && !releaseVersionOnly && (
-        <Typography variant="h6" gutterBottom id="deployment-info-heading">
-          Deployment Information
-        </Typography>
-      )}
-      
+    <Box sx={{ mb: 0 }}>
       {/* Change Number Input - Requirements: 3.1, 3.4 */}
-      {(changeNumberOnly || (!environmentOnly && !changeNumberOnly && !releaseVersionOnly)) && (
-        <TextField
-          fullWidth
-          required
-          label="Change Number"
-          value={changeNumber}
-          onChange={(e) => onChangeNumberChange(e.target.value.replace(/\D/g, '').slice(0, 8))}
-          onBlur={handleChangeNumberBlur}
-          error={!!changeNumberError}
-          slotProps={{
-            htmlInput: {
-              maxLength: 8,
-              inputMode: 'numeric',
-              pattern: '[0-9]*',
-              'aria-label': 'Change number',
-              'aria-describedby': changeNumberError ? 'change-number-error' : 'change-number-help',
-              'aria-invalid': !!changeNumberError
-            },
-            input: {
-              startAdornment: <InputAdornment position="start">CHG</InputAdornment>
-            },
-            inputLabel: {
-              shrink: true
+      {changeNumberOnly && (
+        <>
+          <TextField
+            fullWidth
+            required
+            label="Change Number"
+            value={changeNumber}
+            onChange={(e) => onChangeNumberChange(e.target.value.replace(/\D/g, '').slice(0, 8))}
+            onBlur={handleChangeNumberBlur}
+            error={!!changeNumberError}
+            helperText={
+              changeNumberError ? (
+                <span id="change-number-error">{changeNumberError}</span>
+              ) : undefined
             }
-          }}
-          sx={{ mb: changeNumberOnly ? 0 : 2 }}
-        />
+            slotProps={{
+              htmlInput: {
+                maxLength: 8,
+                inputMode: 'numeric',
+                pattern: '[0-9]*',
+                'aria-label': 'Change number',
+                'aria-describedby': changeNumberError
+                  ? 'change-number-error'
+                  : 'change-number-help',
+                'aria-invalid': !!changeNumberError
+              },
+              input: {
+                startAdornment: <InputAdornment position="start">CHG</InputAdornment>
+              },
+              inputLabel: {
+                shrink: true
+              }
+            }}
+            sx={{ mb: 0 }}
+          />
+          {!changeNumberError && (
+            <span id="change-number-help" className="sr-only">
+              Enter the ServiceNow change number digits only, up to 8 digits. The CHG prefix is
+              added automatically.
+            </span>
+          )}
+        </>
       )}
 
       {/* Release Version Input - Requirements: 3.2, 3.4 */}
-      {(releaseVersionOnly || (!environmentOnly && !changeNumberOnly && !releaseVersionOnly)) && (
-        <TextField
-          fullWidth
-          required
-          label="Release Version"
-          placeholder="YYYY.#.#"
-          value={releaseVersion}
-          onChange={(e) => onReleaseVersionChange(e.target.value)}
-          onBlur={handleReleaseVersionBlur}
-          error={!!releaseVersionError}
-          slotProps={{
-            htmlInput: {
-              maxLength: 50,
-              'aria-label': 'Release version',
-              'aria-describedby': releaseVersionError ? 'release-version-error' : 'release-version-help',
-              'aria-invalid': !!releaseVersionError
-            },
-            input: {
-              startAdornment: <InputAdornment position="start">PI</InputAdornment>
-            },
-            inputLabel: {
-              shrink: true
+      {releaseVersionOnly && (
+        <>
+          <TextField
+            fullWidth
+            required
+            label="Release Version"
+            placeholder="YYYY.#.#"
+            value={releaseVersion}
+            onChange={(e) => onReleaseVersionChange(formatReleaseVersion(e.target.value))}
+            onBlur={handleReleaseVersionBlur}
+            error={!!releaseVersionError}
+            helperText={
+              releaseVersionError ? (
+                <span id="release-version-error">{releaseVersionError}</span>
+              ) : undefined
             }
-          }}
-          sx={{ mb: releaseVersionOnly ? 0 : 2 }}
-        />
+            slotProps={{
+              htmlInput: {
+                maxLength: 8,
+                inputMode: 'numeric',
+                'aria-label': 'Release version',
+                'aria-describedby': releaseVersionError
+                  ? 'release-version-error'
+                  : 'release-version-help',
+                'aria-invalid': !!releaseVersionError
+              },
+              input: {
+                startAdornment: <InputAdornment position="start">PI</InputAdornment>
+              },
+              inputLabel: {
+                shrink: true
+              }
+            }}
+            sx={{ mb: 0 }}
+          />
+          {!releaseVersionError && (
+            <span id="release-version-help" className="sr-only">
+              Enter the program increment version in YYYY.#.# format, for example 2025.4.1
+            </span>
+          )}
+        </>
       )}
 
       {/* Environment Dropdown - Requirements: 3.3 (only shown when environmentOnly is true) */}
@@ -184,12 +213,12 @@ function DeploymentInfoSectionComponent({
           error={!!environmentError}
           sx={{ mb: 0 }}
         >
-          <InputLabel id="environment-label" shrink>Environment *</InputLabel>
+          <InputLabel id="environment-label" shrink>Environment</InputLabel>
           <Select
             labelId="environment-label"
             id="environment-select"
             value={environment || ''}
-            label="Environment *"
+            label="Environment"
             onChange={(e) => handleEnvironmentChange(e.target.value)}
             notched={true}
             inputProps={{

@@ -2,14 +2,26 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/tower-icon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#15273f" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="TOWER — Takeoff Notifications for Technology Deployments. Generates deployment notification flight plans from deployment metadata."
+    />
     <title>TOWER — Takeoff Notifications for Technology Deployments</title>
     
-    <!-- Open Sans Font: Exclusive font family for the entire application -->
+    <!-- Open Sans Font: Exclusive font family for the entire application.
+         Jetstream typography permits only two weights — 400 (regular) and
+         600 (semibold) — so only those two are requested. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" />
     
     <style>
       /* Ensure full height and no margin for proper background coverage */
@@ -24,9 +36,10 @@
         scroll-behavior: smooth;
       }
 
-      /* Global Open Sans font enforcement - no other fonts allowed anywhere */
+      /* Global Open Sans font enforcement - no other fonts allowed anywhere.
+         Fallback stack mirrors OPEN_SANS_FONT_FAMILY in AppThemeProvider.tsx. */
       * {
-        font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+        font-family: 'Open Sans', 'open-sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
       }
 
       /*

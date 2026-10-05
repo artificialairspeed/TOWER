@@ -1,24 +1,23 @@
 /**
- * TemplateProvider class for loading and caching HTML templates.
- * Implements task 7.1 - Load and parse HTML templates
- * Requirements: 9.5, 9.6
+ * TemplateProvider class for loading and caching the single Flight Plan HTML template.
+ * Requirements: 8.2, 9.1, 9.2, 9.3, 9.4, 10.2
  */
 
-type Theme = 'light' | 'dark';
+const TEMPLATE_PATH = '/templates/flight-plan.html';
 
 class TemplateProvider {
-  private templates: Map<Theme, string> = new Map();
+  private template: string | null = null;
   private loadingPromise: Promise<void> | null = null;
 
   /**
-   * Initialize the template provider by loading templates.
+   * Initialize the template provider by loading the single template.
    * This should be called early in the application lifecycle.
-   * 
-   * @returns Promise that resolves when templates are loaded
+   *
+   * @returns Promise that resolves when the template is loaded
    */
   async initialize(): Promise<void> {
-    if (this.templates.size > 0) {
-      return; // Already loaded
+    if (this.template !== null) {
+      return; // Already loaded (Req 9.4)
     }
 
     if (this.loadingPromise) {
@@ -27,9 +26,9 @@ class TemplateProvider {
 
     // On failure, reset the cached loadingPromise to null so a subsequent
     // initialize() call starts a fresh attempt without requiring a full
-    // page reload. A successful load leaves templates cached, making
-    // subsequent initialize() calls a no-op.
-    this.loadingPromise = this.loadTemplates().catch((err) => {
+    // page reload. A successful load leaves the template cached, making
+    // subsequent initialize() calls a no-op. (Req 9.3)
+    this.loadingPromise = this.loadTemplate().catch((err) => {
       this.loadingPromise = null;
       throw err;
     });
@@ -37,58 +36,42 @@ class TemplateProvider {
   }
 
   /**
-   * Get the HTML template for the specified theme.
-   * Templates must be initialized before calling this method.
-   * 
-   * @param theme - The theme to get the template for ('light' or 'dark')
+   * Get the Flight Plan HTML template.
+   * The template must be initialized before calling this method.
+   *
    * @returns The HTML template string
-   * @throws Error if templates haven't been loaded or template not found
+   * @throws Error if the template hasn't been loaded
    */
-  getTemplate(theme: Theme): string {
-    const template = this.templates.get(theme);
-    if (!template) {
-      throw new Error(
-        `Template not found for theme: ${theme}. ` +
-        `Make sure to call initialize() before getTemplate().`
-      );
+  getTemplate(): string {
+    if (this.template === null) {
+      throw new Error('Template not loaded. Call initialize() first.');
     }
 
-    return template;
+    return this.template;
   }
 
   /**
-   * Check if templates are loaded.
-   * 
-   * @returns true if templates are loaded, false otherwise
+   * Check if the template is loaded.
+   *
+   * @returns true if the template is loaded, false otherwise
    */
   isLoaded(): boolean {
-    return this.templates.size > 0;
+    return this.template !== null;
   }
 
   /**
-   * Load HTML templates from the public/templates directory.
-   * This method loads both light-mode.html and dark-mode.html templates
-   * and caches them in memory.
+   * Load the Flight Plan HTML template from the public/templates directory
+   * and cache it in memory.
    */
-  private async loadTemplates(): Promise<void> {
-    try {
-      const [lightTemplate, darkTemplate] = await Promise.all([
-        this.loadTemplateAsync('/templates/light-mode.html'),
-        this.loadTemplateAsync('/templates/dark-mode.html')
-      ]);
-      
-      this.templates.set('light', lightTemplate);
-      this.templates.set('dark', darkTemplate);
-    } catch (error) {
-      throw new Error(`Failed to load templates: ${error}`);
-    }
+  private async loadTemplate(): Promise<void> {
+    this.template = await this.loadTemplateAsync(TEMPLATE_PATH);
   }
 
   /**
    * Asynchronously load a template file using fetch.
    * The request is aborted if it does not complete within 5 seconds, and a
    * timeout error identifying the template path is thrown.
-   * 
+   *
    * @param path - The path to the template file
    * @returns Promise with the template content as a string
    * @throws Error on timeout (>5s), non-2xx response, or network failure
@@ -115,26 +98,7 @@ class TemplateProvider {
     }
   }
 
-  /**
-   * Manually set a template (useful for testing or dynamic template loading).
-   * 
-   * @param theme - The theme to set the template for
-   * @param template - The HTML template string
-   */
-  setTemplate(theme: Theme, template: string): void {
-    this.templates.set(theme, template);
-  }
-
-  /**
-   * Clear all cached templates.
-   */
-  clear(): void {
-    this.templates.clear();
-    this.loadingPromise = null;
-  }
 }
 
 // Export a singleton instance
 export const templateProvider = new TemplateProvider();
-export { TemplateProvider };
-export type { Theme };

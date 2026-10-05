@@ -1,951 +1,373 @@
-# Developer Guide - Deployment Notification Generator Portal
+# TOWER — Developer Guide
 
-## Quick Start
+Working reference for TOWER (Takeoff Notifications for Technology Deployments):
+how the app is put together, what the data model is, how the artifact is
+produced, and what is deliberately unfinished.
 
-### Project Setup
-
-The Deployment Notification Generator Portal is a React 18 + TypeScript project built with Vite. Follow these steps to set up your development environment:
-
-#### Prerequisites
-
-- **Node.js**: 16.x or higher
-- **npm**: 7.x or higher (or yarn 1.22.x+)
-- **Git**: For version control
-
-#### Installation Steps
-
-```bash
-# 1. Clone the repository
-git clone <repository-url>
-cd deployment-notification-generator
-
-# 2. Install dependencies
-npm install
-
-# 3. Start development server
-npm run dev
-
-# 4. Open in browser
-# Navigate to http://localhost:5173 (default Vite port)
-```
-
-### Build Commands
-
-```bash
-# Development server (with hot module reloading)
-npm run dev
-
-# Build for production
-npm run build
-
-# Preview production build locally
-npm run preview
-
-# Deploy to AWS S3 (requires DEPLOY_BUCKET environment variable)
-npm run deploy
-```
-
-### Testing Commands
-
-```bash
-# Run unit and integration tests
-npm test
-
-# Run tests in watch mode
-npm test -- --watch
-
-# Run tests with interactive UI
-npm run test:ui
-
-# Generate test coverage report
-npm run coverage
-
-# Run E2E tests with Playwright (interactive)
-npm run test:e2e
-
-# Run E2E tests in headless mode
-npm run test:e2e -- --run
-
-# Debug E2E tests step-by-step
-npm run test:e2e:debug
-
-# Run E2E tests on specific browser
-npm run test:e2e -- --project=chrome
-npm run test:e2e -- --project=firefox
-npm run test:e2e -- --project=webkit   # Safari
-npm run test:e2e -- --project=edge
-```
+For setup and the npm scripts, see the [README](../README.md). For S3 hosting,
+see [DEPLOYMENT.md](./DEPLOYMENT.md). For the palette and typography rules, see
+[src/theme/README.md](../src/theme/README.md).
 
 ---
 
-## Architecture Overview
+## 1. Verification
 
-### High-Level Architecture
+**No test runner and no linter are configured in this repository.
+`npm run build` is the verification gate.**
 
-The Deployment Notification Generator Portal uses a **three-layer architecture**:
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                   PRESENTATION LAYER                         │
-│  React Components, Form Management, User Interactions       │
-├─────────────────────────────────────────────────────────────┤
-│                   DOMAIN LAYER                              │
-│  Data Models, Validation, Formatting, Template Injection   │
-├─────────────────────────────────────────────────────────────┤
-│                   OUTPUT LAYER                              │
-│  Artifact Generation (HTML/PDF/PNG), File Naming, Delivery │
-└─────────────────────────────────────────────────────────────┘
+```bash
+npm run build     # tsc -b tsconfig.build.json && vite build — must exit 0
 ```
 
-### Layer Responsibilities
+The TypeScript project build runs with `strict`, `noUnusedLocals`,
+`noUnusedParameters`, `noFallthroughCasesInSwitch`, and
+`noUncheckedIndexedAccess`, so unused code and unchecked index access fail the
+build. What the compiler cannot catch — layout, ARIA wiring, and the rendered
+PNG — has to be checked by hand in `npm run dev`.
 
-#### 1. Domain Layer (Utilities)
-
-**Location**: `src/utils/` and `src/data/`
-
-**Responsibilities**:
-- Data validation (email, phone, required fields, time ordering)
-- Title and file name generation
-- Date/time formatting
-- HTML template token injection
-- Business logic independent of UI framework
-
-**Key Files**:
-- `src/utils/validators.ts` - Field and form validation functions
-- `src/utils/formatters.ts` - Title, date, and time formatting
-- `src/utils/fileNamer.ts` - File name generation and collision handling
-- `src/utils/templateInjector.ts` - HTML token replacement
-- `src/data/formFactory.ts` - Default form creation
-- `src/data/applicationCatalog.ts` - Application definitions
-
-**Design Philosophy**: Pure functions, no side effects, no React dependencies
-
-#### 2. Presentation Layer (React Components)
-
-**Location**: `src/components/`
-
-**Responsibilities**:
-- User interaction handling (form inputs, clicks, selections)
-- Component rendering and styling
-- Local state management for UI
-- Accessibility (ARIA labels, keyboard navigation)
-- Error display and user feedback
-
-**Key Components**:
-- `App.tsx` - Main application entry point
-- `FormManager.tsx` - Manages 1-5 deployment forms
-- `DeploymentForm.tsx` - Single deployment form with all sections
-- `ApplicationSelector.tsx` - Dropdown for application selection
-- `DeploymentInfoSection.tsx` - Change number, version, environment
-- `DeploymentTitleDisplay.tsx` - Read-only computed title
-- `ScheduleSection.tsx` - Date and time pickers
-- `OutageSection.tsx` - Outage indicator and date/time pickers
-- `ChangeItemsSection.tsx` - List of change items (1-999)
-- `ImpactSection.tsx` - List of impact items (1-100)
-- `ContactSection.tsx` - Contact information
-- `ThemeSelector.tsx` - Light/Dark mode selection
-
-**Design Philosophy**: Unidirectional data flow, composition over inheritance
-
-#### 3. Output Layer (Artifact Generation)
-
-**Location**: `src/utils/`
-
-**Responsibilities**:
-- HTML artifact generation (template population)
-- PDF generation using html2pdf.js
-- PNG generation using html-to-image
-- Sequential delivery orchestration with 500ms intervals
-- File download handling
-
-**Key Files**:
-- `src/utils/artifactGenerator.ts` - HTML/PDF/PNG generation
-- `src/utils/deliveryOrchestrator.ts` - Sequential artifact delivery
-- `src/hooks/useOutputGenerator.ts` - Integration hook for UI
-
-### Data Flow
-
-```
-User Input
-    ↓
-Form Component State Update
-    ↓
-Validation (Domain Layer)
-    ↓
-Error Display or Success State
-    ↓
-Generate Artifacts (on user action)
-    ↓
-Domain Layer: Validation → Template Injection
-    ↓
-Output Layer: HTML/PDF/PNG Generation
-    ↓
-Sequential Delivery (500ms intervals)
-    ↓
-User Downloads Artifacts
-```
-
-### Directory Structure
-
-```
-src/
-├── components/
-│   ├── ApplicationSelector.tsx
-│   ├── ApplicationSelector.README.md
-│   ├── ChangeItemsSection.tsx
-│   ├── ChangeItemsSection.README.md
-│   ├── ChangeItemsSection.test.tsx
-│   ├── ContactSection.tsx
-│   ├── ContactSection.README.md
-│   ├── DeploymentForm.tsx
-│   ├── DeploymentForm.README.md
-│   ├── DeploymentInfoSection.tsx
-│   ├── DeploymentInfoSection.README.md
-│   ├── DeploymentInfoSection.test.tsx
-│   ├── DeploymentTitleDisplay.tsx
-│   ├── DeploymentTitleDisplay.README.md
-│   ├── ImpactSection.tsx
-│   ├── ImpactSection.README.md
-│   ├── ImpactSection.test.tsx
-│   ├── OutageSection.tsx
-│   ├── OutageSection.README.md
-│   ├── OutageSection.test.tsx
-│   ├── ScheduleSection.tsx
-│   ├── ScheduleSection.README.md
-│   ├── ScheduleSection.test.tsx
-│   ├── ThemeSelector.tsx
-│   ├── ThemeSelector.README.md
-│   ├── ValidationErrorSummary.tsx
-│   ├── ValidationErrorSummary.README.md
-│   └── index.ts
-│
-├── data/
-│   ├── formFactory.ts
-│   ├── applicationCatalog.ts
-│   └── index.ts
-│
-├── hooks/
-│   ├── useFormManager.ts
-│   ├── useResetConfirmation.ts
-│   ├── useTheme.ts
-│   ├── useOutputGenerator.ts
-│   └── index.ts
-│
-├── types/
-│   ├── models.ts
-│   ├── validation.ts
-│   └── index.ts
-│
-├── utils/
-│   ├── validators.ts
-│   ├── formatters.ts
-│   ├── fileNamer.ts
-│   ├── templateInjector.ts
-│   ├── templateProvider.ts
-│   ├── artifactGenerator.ts
-│   ├── deliveryOrchestrator.ts
-│   └── index.ts
-│
-├── App.tsx
-├── App.e2e.test.tsx
-└── main.tsx
-
-public/
-└── templates/
-    ├── light-mode.html
-    └── dark-mode.html
-
-playwright.config.ts
-cypress.config.cjs
-vite.config.ts
-tsconfig.json
-package.json
-```
-
-### Component Hierarchy
-
-```
-App
-├── ThemeSelector (session-level theme)
-├── FormManager (manages 1-5 forms)
-│   ├── DeploymentForm (form instance 1)
-│   │   ├── ApplicationSelector
-│   │   ├── DeploymentInfoSection
-│   │   ├── DeploymentTitleDisplay
-│   │   ├── ScheduleSection
-│   │   ├── OutageSection
-│   │   ├── ChangeItemsSection
-│   │   ├── ImpactSection
-│   │   └── ContactSection
-│   ├── DeploymentForm (form instance 2)
-│   │   └── [same structure]
-│   └── [up to 5 form instances]
-│
-└── OutputGenerator (Generate button + orchestration)
-```
+Because a type-correct behavioural regression ships silently, adding a test
+runner is the highest-value investment this repository could make. See
+[Open items](#8-open-items).
 
 ---
 
-## Testing Approach and Commands
+## 2. Architecture
 
-### Overview
-
-The project uses a **comprehensive testing strategy** combining:
-
-- **Unit Tests**: Validate individual functions (validators, formatters, utilities)
-- **Integration Tests**: Validate workflows (form submission, validation chains, batch operations)
-- **Component Tests**: Validate UI components (React Testing Library)
-- **Snapshot Tests**: Verify rendering consistency
-- **End-to-End Tests**: Validate complete user workflows (Playwright/Cypress)
-
-**Note**: Property-based testing is intentionally NOT used for this feature because:
-- Primary functionality is UI rendering (better tested with snapshots/E2E)
-- Artifact generation is side-effect-only (no meaningful return values)
-- Heavy browser API dependencies (html2pdf, html-to-image)
-- Template population is simple string replacement
-
-### Running Tests
-
-#### Unit and Integration Tests
-
-```bash
-# Run all tests once
-npm test
-
-# Run tests in watch mode (re-runs on file changes)
-npm test -- --watch
-
-# Run tests matching a pattern
-npm test -- --grep "validation"
-
-# Run tests for a specific file
-npm test -- src/utils/validators.test.ts
-
-# Run tests with coverage report
-npm run coverage
-
-# Run tests with interactive UI
-npm run test:ui
-```
-
-#### End-to-End Tests (Playwright)
-
-```bash
-# Interactive mode (opens browser)
-npm run test:e2e
-
-# Headless mode (no browser UI)
-npm run test:e2e -- --run
-
-# Run on specific browser
-npm run test:e2e -- --project=chrome
-npm run test:e2e -- --project=firefox
-npm run test:e2e -- --project=webkit
-npm run test:e2e -- --project=edge
-
-# Run specific test file
-npm run test:e2e -- e2e/single-deployment-flow.spec.ts
-
-# Debug tests interactively
-npm run test:e2e:debug
-
-# View test results HTML report
-npm run test:e2e -- --reporter=html
-```
-
-#### End-to-End Tests (Cypress)
-
-```bash
-# Interactive mode (Cypress UI)
-npm run e2e
-
-# Headless mode
-npm run e2e:run
-
-# Run specific test file
-npm run e2e:run -- --spec "cypress/e2e/**/*.cy.js"
-```
-
-### Test File Locations
+Three layers, with state prop-drilled from `App.tsx`. There is no React Context
+and no state library.
 
 ```
-src/
-├── components/
-│   ├── ChangeItemsSection.test.tsx
-│   ├── DeploymentInfoSection.test.tsx
-│   ├── ImpactSection.test.tsx
-│   ├── OutageSection.test.tsx
-│   ├── ScheduleSection.test.tsx
-│   ├── ComponentSnapshots.test.tsx
-│   └── [more component tests]
-│
-└── [utility test files]
-
-e2e/
-├── single-deployment-flow.spec.ts
-├── browser-compatibility.spec.ts
-└── [more E2E tests]
-
-cypress/
-└── e2e/
-    └── 20.2-multi-deployment-flow.cy.js
+┌───────────────────────────────────────────────────────────────┐
+│ PRESENTATION   App.tsx → FormManager → DeploymentForm →       │
+│                section components. Form state lives in        │
+│                useFormManager; validation errors in           │
+│                useValidationErrors.                           │
+├───────────────────────────────────────────────────────────────┤
+│ DOMAIN         validators.ts (field + form rules)             │
+│                formatters.ts (masks, escaping, token inject)  │
+│                fileNaming.ts (base artifact name)             │
+│                formPersistence.ts (localStorage round-trip)   │
+├───────────────────────────────────────────────────────────────┤
+│ OUTPUT         templateProvider.ts (fetch + cache template)   │
+│                htmlGenerator.ts  (template + data → HTML)     │
+│                bundleBuilder.ts  (HTML + file name → bundle)  │
+│                artifactGeneration.ts (HTML → PNG blob)        │
+│                artifactDelivery.ts   (open PNG in a new tab)  │
+└───────────────────────────────────────────────────────────────┘
 ```
 
-### Test Categories
+### Component tree
 
-#### Unit Tests
-
-**Purpose**: Validate business logic functions in isolation
-
-**Examples**:
-- Email and phone format validation
-- Title generation with various input combinations
-- File name generation and collision handling
-- Date/time formatting
-- Form validation rules
-
-**Running**:
-```bash
-npm test -- src/utils/validators.test.ts
+```
+App                              (src/App.tsx)
+├── AppThemeProvider              dark MUI theme + CssBaseline
+├── header                        Southwest logo, "TOWER", Start New,
+│                                 Generate Flight Plan
+├── Alert  (template load failed, with Retry)
+├── Alert  (empty application catalog)
+├── Alert  (validation failed — count only)
+├── FormManager                   (src/components/FormManager.tsx)
+│   └── DeploymentForm            (src/components/DeploymentForm.tsx)
+│       ├── ValidationErrorSummary        shown when the form has errors
+│       ├── ApplicationSelector           catalog dropdown
+│       ├── DeploymentInfoSection ×3      one instance per field:
+│       │                                 environmentOnly / changeNumberOnly /
+│       │                                 releaseVersionOnly
+│       ├── ScheduleSection               two DateTimePickers + outage radios
+│       ├── ChangeItemsSection            list of change items
+│       │   └── ChangeItemRow  (per item)
+│       │       └── ImpactSection         that item's impact statements
+│       │           └── ImpactItemRow  (per impact)
+│       └── ContactSection                name, email, optional phone
+├── Snackbar                      generation result / popup-blocked notice
+└── Dialog                        "Start a new form?" confirmation
 ```
 
-#### Integration Tests
+`ApplicationSelector` and `DeploymentInfoSection` sit in a single four-across
+row owned by `DeploymentForm`, which also renders the "Deployment Information"
+heading. That is why `DeploymentInfoSection` takes the three `*Only` flags:
+exactly one must be set per instance.
 
-**Purpose**: Validate how multiple components work together
+Impact items are **children of a change item** (`ChangeItem.impactItems`), not a
+form-level list — `ImpactSection` renders inside each row.
 
-**Examples**:
-- Form submission with validation
-- Batch validation across multiple forms
-- Multi-form add/remove workflow
-- Artifact generation with template injection
+Every leaf component is wrapped in `React.memo`. The wrappers are currently
+inert because the parents pass freshly-allocated inline arrows on each render;
+see [Open items](#8-open-items).
 
-**Running**:
-```bash
-npm test -- --grep "integration"
-```
+### Hooks
 
-#### Component Tests
-
-**Purpose**: Validate React components render correctly and respond to user interactions
-
-**Examples**:
-- Form field input and validation feedback
-- Add/Remove button enable/disable logic
-- Outage section show/hide toggle
-- Theme selector mutual exclusivity
-- Validation error display
-
-**Tools**: React Testing Library
-
-**Running**:
-```bash
-npm test -- src/components/ScheduleSection.test.tsx
-```
-
-#### Snapshot Tests
-
-**Purpose**: Detect unintended UI changes
-
-**Examples**:
-- DeploymentForm rendering
-- FormManager with various form counts
-- Validation error states
-- Theme selector appearance
-
-**Files**: `src/components/ComponentSnapshots.test.tsx`
-
-**Running**:
-```bash
-npm test -- ComponentSnapshots.test.tsx
-```
-
-**Updating snapshots** (after intentional UI changes):
-```bash
-npm test -- -u
-```
-
-#### E2E Tests
-
-**Purpose**: Validate complete user workflows end-to-end
-
-**Test Scenarios**:
-
-1. **Single Deployment Flow** (`e2e/single-deployment-flow.spec.ts`)
-   - Fill all required fields
-   - Select Dark/Light theme
-   - Click Generate Outputs
-   - Verify 3 artifacts generated successfully
-   - Verify file names follow correct format
-
-2. **Multi-Deployment Flow** (`cypress/e2e/20.2-multi-deployment-flow.cy.js`)
-   - Add 3 deployment forms
-   - Fill each form with different data
-   - Click Generate Outputs
-   - Verify 9 artifacts generated (3 forms × 3 artifacts)
-   - Verify sequential delivery with 500ms intervals
-   - Verify distinct file names (no collisions)
-
-3. **Form Lifecycle Flow**
-   - Add forms up to maximum (5)
-   - Remove forms down to minimum (1)
-   - Reset form with confirmation
-   - Verify reset clears data
-   - Cancel reset and verify data preserved
-
-4. **Validation Error Flow**
-   - Leave required fields empty
-   - Click Generate Outputs
-   - Verify validation errors displayed
-   - Verify data preserved
-   - Correct errors and generate successfully
-
-5. **Browser Compatibility** (`e2e/browser-compatibility.spec.ts`)
-   - Test date/time picker functionality
-   - Test PDF/PNG artifact generation
-   - Test download behavior
-   - Test UI rendering consistency
-   - Run on all supported browsers
-
-**Running**:
-```bash
-npm run test:e2e
-npm run test:e2e -- --run
-npm run test:e2e -- --project=chrome
-```
-
-### Test Coverage
-
-Run coverage report to see which files/functions are tested:
-
-```bash
-npm run coverage
-```
-
-This generates a coverage report in the terminal and creates an HTML report in `coverage/` directory.
-
-**Coverage Goals**:
-- Domain Layer (validators, formatters): 100%
-- Components: 80%+ (integration tested, E2E tested)
-- Utilities: 95%+
-
-### Testing Best Practices
-
-1. **Test Names**: Use descriptive names that explain what is being tested
-   ```typescript
-   test('validates email format with user@example.com', () => {...});
-   test('blocks generation when change number is empty', () => {...});
-   ```
-
-2. **Test Organization**: Group related tests using `describe` blocks
-   ```typescript
-   describe('Email Validation', () => {
-     test('accepts valid email formats', () => {...});
-     test('rejects invalid email formats', () => {...});
-   });
-   ```
-
-3. **Test Data**: Use realistic example data
-   ```typescript
-   const validForm = {
-     application: 'Crew Portal',
-     changeNumber: 'CHG12345',
-     // ...
-   };
-   ```
-
-4. **Assertions**: Use clear, specific assertions
-   ```typescript
-   expect(validateEmail('user@example.com')).toBe(true);
-   expect(result.errors).toHaveLength(2);
-   expect(errorMessage).toContain('required');
-   ```
-
-5. **Test Isolation**: Each test should be independent
-   - No shared state between tests
-   - Clean up after each test (if needed)
-   - Don't depend on test execution order
+| Hook | Responsibility |
+|---|---|
+| `useFormManager` | Owns the single `DeploymentFormData`. Rehydrates from `localStorage` on mount, debounces the write back (400 ms), and clears both on reset. |
+| `useValidationErrors` | `formId → field → message` map. `setErrors` (batch), `setFieldError` (blur), `clearFieldError`, `clearAllErrors`, `getAllErrors`. |
+| `useOutputGenerator` | Validate → build bundle → deliver. Exposes `state`, `validationResult`, `deliveryResult`, `isGenerating`. |
+| `useResetConfirmation` | Open/confirm/cancel state for the "Start New" dialog. |
 
 ---
 
-## Known Limitations and Open Items
+## 3. Data flow
 
-### Current Limitations
+**Editing.** A section's `onChange` calls `DeploymentForm.handleFieldUpdate`,
+which forwards the partial update to `useFormManager.updateForm` and clears that
+field's validation error. The persistence effect schedules a debounced
+`localStorage` write.
 
-#### 1. Data Persistence
+**Blur validation.** `onBlurValidate(field, value)` runs
+`validateFieldOnBlur`, which checks format and length only — never
+"required" — so tabbing through an empty field does not light it up red.
 
-**Limitation**: No data persistence across browser sessions
-- **Description**: All form data exists only in browser memory during the session
-- **Reason**: Design requirement for stateless client-side application
-- **Workaround**: Users must re-enter data if browser is closed or page is refreshed
-- **Future Enhancement**: Optional localStorage auto-save with user consent
+**Generate.** `App.handleGenerateOutputs` → `useOutputGenerator.generateOutputs`:
 
-#### 2. Template Customization
+1. `validateForGeneration(form, catalogEmpty)` — the catalog check plus the full
+   `validateForm` pass. On failure, state becomes `error`, errors are pushed
+   into `useValidationErrors`, and nothing is generated.
+2. `buildArtifactBundle(form)` — computes the base file name, then
+   `generateHTML(form)` injects the form data into the cached template.
+3. `deliverArtifact(bundle)` — `openPNGInNewTab` writes the HTML into an
+   offscreen iframe, rasterizes the iframe body with `html-to-image`
+   (`pixelRatio` ≥ 3), and opens the blob URL in a new tab.
+4. The `DeliveryResult` drives the snackbar. A blocked pop-up counts as
+   **successful** (the image rendered) with `popupBlocked: true`.
 
-**Limitation**: HTML templates are fixed and cannot be customized via UI
-- **Description**: Light and Dark mode templates are pre-defined in `public/templates/`
-- **Reason**: Out of scope for current implementation
-- **Workaround**: Edit template files directly for minor template changes
-- **Future Enhancement**: Template customization UI in admin panel
-
-#### 3. Batch Operations
-
-**Limitation**: No bulk import from CSV/JSON
-- **Description**: Each deployment form must be filled individually
-- **Reason**: Out of scope for current implementation
-- **Workaround**: Manual entry for each deployment
-- **Future Enhancement**: CSV/JSON import wizard
-
-#### 4. Deployment History
-
-**Limitation**: No history tracking of generated artifacts
-- **Description**: No record of what artifacts were generated and when
-- **Reason**: Stateless client-side design
-- **Workaround**: Track deployments in external system
-- **Future Enhancement**: Backend deployment history service
-
-#### 5. File Naming Constraints
-
-**Limitation**: File names may exceed system limits with long application/environment names
-- **Description**: File names follow format `Application_Environment_CHG_YYYYMMDD.ext`
-- **Reason**: Desire for human-readable file names
-- **Workaround**: Keep application/environment names reasonably short
-- **Future Enhancement**: Configurable file naming strategies (hashing, abbreviations)
-
-#### 6. Date Picker Keyboard Input
-
-**Limitation**: Date/time pickers only accept mouse/touch input (keyboard input intentionally blocked)
-- **Description**: Users must use date picker UI; cannot type dates directly
-- **Reason**: Design requirement to ensure consistent date formatting
-- **Workaround**: Use the calendar/time picker UI
-- **Note**: This is intentional and improves data quality
-
-#### 7. Browser Pop-up Requirements
-
-**Limitation**: Requires pop-ups enabled for HTML artifact viewing
-- **Description**: HTML artifacts open in new browser tabs (blocked by pop-up blockers)
-- **Reason**: Limitation of browser HTML-in-URL approach
-- **Workaround**: Disable pop-up blockers for this site or download PDF/PNG instead
-- **Future Enhancement**: Host HTML artifacts on backend server
-
-#### 8. Application Catalog Size
-
-**Limitation**: Hardcoded catalog of 5 applications (not configurable)
-- **Description**: APPLICATION_CATALOG in `src/data/applicationCatalog.ts` cannot be modified at runtime
-- **Reason**: Out of scope for current implementation
-- **Workaround**: Rebuild application with updated catalog
-- **Future Enhancement**: Backend application catalog service
-
-### Known Issues
-
-#### 1. Large List Performance
-
-**Issue**: Rendering 100 Impact Items or 999 Change Items may cause lag on older devices
-- **Status**: Acknowledged, not critical
-- **Impact**: Low-end devices (2GB RAM, older processors)
-- **Workaround**: Use high-performance devices or upgrade browser
-- **Future Enhancement**: Virtual scrolling for large lists
-
-#### 2. PDF Generation Quality
-
-**Issue**: Some browsers may produce lower-quality PDFs with complex layouts
-- **Status**: Browser-dependent, not controllable
-- **Impact**: Visual appearance of PDF may vary
-- **Workaround**: PNG artifacts provide higher image quality
-- **Future Enhancement**: Backend PDF generation service
-
-#### 3. Theme Consistency
-
-**Issue**: Changes to theme do not re-generate previously opened HTML artifacts
-- **Status**: Expected behavior (artifacts are independent)
-- **Impact**: Users must regenerate artifacts to change theme
-- **Workaround**: Regenerate artifacts with new theme
-- **Note**: This is intentional; each artifact is independent
-
-#### 4. Internet Explorer Support
-
-**Issue**: Not supported (uses modern JavaScript/CSS features)
-- **Status**: Intentional decision
-- **Supported Browsers**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
-- **Workaround**: Use modern browser
-- **Note**: Internet Explorer reaches end-of-life January 2021
-
-#### 5. Mobile Browser Limitations
-
-**Issue**: PDF/PNG downloads may not work as expected on mobile browsers
-- **Status**: Browser-dependent
-- **Impact**: Mobile users may see "save as" dialog instead of automatic download
-- **Workaround**: Use desktop browser for artifact generation
-- **Future Enhancement**: Mobile-optimized download workflow
-
-### Browser Compatibility Matrix
-
-| Browser | Version | Support | Notes |
-|---------|---------|---------|-------|
-| Chrome | 90+ | ✅ Full | Fully tested and supported |
-| Firefox | 88+ | ✅ Full | Fully tested and supported |
-| Safari | 14+ | ✅ Full | Fully tested and supported |
-| Edge | 90+ | ✅ Full | Based on Chromium, fully supported |
-| Internet Explorer | All | ❌ None | Not supported, use Edge instead |
-
-**Browser-Specific Notes**:
-- **Chrome/Edge**: Fastest PDF/PNG generation
-- **Firefox**: Reliable date/time pickers
-- **Safari**: May require pop-up prompt for downloads
-- **Mobile Safari/Chrome**: Downloads go to device Downloads folder
-
-### Performance Characteristics
-
-#### Load Times
-- **Initial Load**: 2-3 seconds (includes React, MUI, libraries)
-- **Form Add**: <100ms
-- **Form Remove**: <50ms
-- **Title Generation**: <10ms (debounced)
-
-#### Artifact Generation (per form)
-- **HTML**: <100ms
-- **PDF**: 500ms - 2s (depends on content and browser)
-- **PNG**: 300ms - 1s (depends on resolution and browser)
-- **Total for 1 form**: ~1-3 seconds
-- **Total for 5 forms**: ~5-15 seconds (sequential with 500ms intervals)
-
-### Resource Requirements
-
-#### Browser Memory
-- **Idle**: 30-50 MB
-- **With 5 forms**: 60-80 MB
-- **During PDF generation**: Up to 200 MB temporarily
-
-#### Disk Space
-- **Per artifact**: 100-500 KB
-- **Batch of 5 forms (15 artifacts)**: 1.5-7.5 MB
-
-### Accessibility Compliance
-
-**WCAG 2.1 Level AA Target**:
-- ✅ Keyboard navigation for all form controls
-- ✅ ARIA labels on form sections
-- ✅ Focus indicators visible on all interactive elements
-- ✅ Color contrast 4.5:1 for normal text, 3:1 for UI components
-- ✅ Screen reader support for form validation
-- ✅ Accessible date/time pickers (native HTML5)
-
-**Tested With**:
-- NVDA (Windows screen reader)
-- JAWS (Windows screen reader)
-- VoiceOver (macOS/iOS screen reader)
-- Browser zoom up to 400%
-- High contrast mode
-
-**Known Accessibility Issues**: None
-
-### Security Notes
-
-**Data Handling**:
-- All data remains in browser memory (no network transmission)
-- No localStorage/sessionStorage used by default
-- HTML output contains injected user data (properly escaped)
-- No authentication required (local application)
-
-**Input Validation**:
-- All user inputs validated before template injection
-- HTML entities escaped to prevent XSS
-- Email and phone formats validated
-
-**Artifact Generation**:
-- HTML artifacts generated in browser with html-to-image
-- PDF artifacts generated client-side with html2pdf.js
-- No data sent to external services
+**Error display.** `validateForm` emits flat `ValidationError` records.
+`DeploymentForm` splits them three ways: exact field matches go to the matching
+section, `changeItems[i].jiraNumber` / `.description` are re-keyed by change-item
+**id** for `ChangeItemsSection`, and
+`changeItems[i].impactItems[j].text` is passed through verbatim for
+`ImpactSection`. `ValidationErrorSummary` lists all of them at the top.
 
 ---
 
-## Component Documentation
+## 4. Data model
 
-Each component has its own README documenting:
-- Component purpose and requirements
-- Props interface
-- Usage examples
-- Related components
+Defined in `src/types/models.ts`.
 
-**Component READMEs Located At**:
-- `src/components/ApplicationSelector.README.md`
-- `src/components/DeploymentForm.README.md`
-- `src/components/DeploymentInfoSection.README.md`
-- `src/components/ContactSection.README.md`
-- `src/components/ScheduleSection.README.md`
-- `src/components/OutageSection.README.md`
-- `src/components/ChangeItemsSection.README.md`
-- `src/components/ImpactSection.README.md`
-- `src/components/ThemeSelector.README.md`
-- And others...
+```ts
+type Environment = 'PROD' | 'QA' | 'ITEST' | 'DEV';
+
+interface Application { id: string; name: string; }
+
+interface ImpactItem { id: string; text: string; }        // 1-500 chars
+
+interface ChangeItem {
+  id: string;
+  jiraNumber: string;        // 1-50 chars, upper-cased on input
+  description: string;       // 1-500 chars
+  impactItems: ImpactItem[]; // 0-100, optional children
+}
+
+interface DeploymentFormData {
+  formId: string;
+  application: Application | null;
+  changeNumber: string;         // digits only, up to 8; "CHG" added at display time
+  releaseVersion: string;       // YYYY.#.# mask, 8 chars
+  environment: Environment | null;
+  startDateTime: Date;          // default tomorrow 20:00
+  endDateTime: Date;            // default tomorrow 22:00
+  hasOutage: boolean;
+  changeItems: ChangeItem[];    // starts empty; 1-999 required at submit
+  contactName: string;          // required, ≤255
+  contactEmail: string;         // required, ≤255, email format
+  contactPhone: string;         // optional; (###) ###-#### when provided
+}
+```
+
+Validation outcome types: `ValidationError { formId, field, message }` and
+`ValidationResult { isValid, errors }`.
+
+Artifact types: `ArtifactBundle { formId, htmlContent, fileName, formData }`,
+`DeliveryResult { total, successful, failed, errors, popupBlocked }`, and
+`GenerationError { formId, artifactType: 'PNG', message, error? }`.
+
+`APPLICATION_CATALOG` holds **nine** applications: OQS Scheduling, OQS
+Recordkeeping, OQS SimLog, Line Check Solver, TRIO, ROSA, IDCAT, SPT, Other.
+
+### Validation rules
+
+| Field | Rule |
+|---|---|
+| Application | required |
+| Change Number | required, 1–8 digits |
+| Release Version | required, `YYYY.#.#` |
+| Environment | required |
+| Start / End | required; End must be later than Start |
+| Change Items | 1–999; each needs a Jira number (≤50) and a description (≤500) |
+| Impact Items | 0–100 per change item; each non-empty, ≤500 |
+| Contact Name | required, ≤255 |
+| Email | required, ≤255, `local@domain.tld` |
+| Phone | optional; when present must match `(###) ###-####` |
+
+Shared message strings live in the `MESSAGES` constant at the top of
+`validators.ts` so the blur-time and submit-time validators cannot drift apart.
+`ValidationErrorSummary` pattern-matches on `'is required'` and
+`'Please select'`, so those two phrasings must not change.
 
 ---
 
-## Deployment
+## 5. Form persistence
 
-### Build Process
+`src/utils/formPersistence.ts` stores a versioned payload under the
+`localStorage` key **`tower:deployment-form`**:
 
-```bash
-# Build for production
-npm run build
-
-# This runs TypeScript compilation and Vite build
-# Output: dist/ directory with optimized bundle
+```json
+{ "version": 2, "form": { /* DeploymentFormData */ } }
 ```
 
-### Deployment Options
-
-#### Option 1: AWS S3 (Configured)
-
-```bash
-# Deploy to S3 (requires DEPLOY_BUCKET environment variable)
-export DEPLOY_BUCKET="my-bucket-name"
-npm run deploy
-
-# Or inline
-DEPLOY_BUCKET="my-bucket-name" npm run deploy
-```
-
-**Prerequisites**:
-- AWS credentials configured
-- S3 bucket created
-- CloudFront distribution (optional)
-
-#### Option 2: Static Hosting
-
-Works with any static hosting provider:
-- Netlify
-- Vercel
-- GitHub Pages
-- AWS CloudFront + S3
-- Any web server serving from `dist/` directory
-
-**Steps**:
-1. Run `npm run build`
-2. Upload contents of `dist/` to host
-3. Configure for SPA (redirect 404s to index.html)
+- `saveForm` is best-effort. A quota or serialization failure is logged as a
+  warning and ignored, so persistence can never break editing.
+- `loadForm` discards anything that is not `version: 2`, and `reviveForm`
+  re-validates every field the UI dereferences without a guard (including the
+  shape of `changeItems` and each item's `impactItems`) before accepting the
+  payload. `Date` fields are reconstructed from their ISO strings. Any failure
+  removes the key and returns `null`, so the app falls back to a fresh default
+  form rather than rendering a broken one.
+- `STORAGE_VERSION` must be bumped on any backwards-incompatible shape change.
+- The key is a persistence contract. Renaming it silently discards every user's
+  in-progress form.
 
 ---
 
-## Troubleshooting
+## 6. The artifact template and its token contract
 
-### Development Issues
+`public/templates/flight-plan.html` is the only template. `templateProvider`
+fetches it from `/templates/flight-plan.html` with a 5-second timeout, caches it
+in memory, and resets its cached promise on failure so the in-page **Retry**
+starts a fresh attempt. `vite build` copies `public/` into `dist/`, so the
+template ships at `dist/templates/flight-plan.html`.
 
-**Port Already in Use**
-```bash
-# Change dev port
-npm run dev -- --port 3000
-```
+`injectTemplate` in `src/utils/formatters.ts` is the only writer of template
+tokens. The contract is closed in both directions: every token below appears in
+the template, and the template contains no token that is not listed here.
 
-**Module Not Found Errors**
-```bash
-# Reinstall dependencies
-rm -rf node_modules package-lock.json
-npm install
-```
+| Token | Value | Escaping |
+|---|---|---|
+| `{{APPLICATION}}` | Application name | HTML-escaped |
+| `{{ENVIRONMENT}}` | Environment; `PROD` rendered as `PRODUCTION` | HTML-escaped |
+| `{{CHANGE_NUMBER}}` | Change number with the `CHG` prefix | HTML-escaped |
+| `{{RELEASE}}` | `PI {YYYY.#.#}` | HTML-escaped |
+| `{{SCHEDULE}}` | Formatted date + time window | generated, no user text |
+| `{{OUTAGE_INDICATOR}}` | `Yes` or `No` | generated |
+| `{{JIRA_ITEMS}}` | Change-item markup, each with nested impact bullets | pre-escaped HTML |
+| `{{CONTACT}}` | Name / email / optional phone, `<br>`-joined | pre-escaped HTML |
 
-**TypeScript Errors**
-```bash
-# Rebuild TypeScript
-npx tsc -b tsconfig.build.json
-```
+**Adding or removing a token requires editing both files in the same change.** A
+token present in only one place either renders as literal `{{TOKEN}}` text in
+the PNG or silently drops data.
 
-### Testing Issues
+The markup `injectTemplate` emits is styled by class name in the template:
+`.change-group` per change item and `.impact-sub` for its impact bullets. Those
+class names are a contract between the two files.
 
-**Tests Timing Out**
-```bash
-# Increase timeout
-npm test -- --testTimeout=10000
-```
-
-**Snapshots Out of Date**
-```bash
-# Update all snapshots
-npm test -- -u
-```
-
-**E2E Tests Failing**
-```bash
-# Run in debug mode
-npm run test:e2e:debug
-
-# Check for browser compatibility
-npm run test:e2e -- --project=chrome
-```
-
-### Build Issues
-
-**Build Size Too Large**
-```bash
-# Analyze bundle size
-npm install --save-dev vite-plugin-visualizer
-# Then configure in vite.config.ts
-```
+The template embeds its Open Sans faces and the Southwest wordmark as base64
+data URIs on purpose: the rasterization iframe must not make network requests.
+That means the wordmark exists twice — `public/southwest-logo.svg` for the app
+header and the inline copy for the artifact — so a brand-asset update needs both
+edits.
 
 ---
 
-## Related Documentation
+## 7. Known limitations
 
-- **Design Document**: `.kiro/specs/deployment-notification-generator/design.md`
-- **Requirements**: `.kiro/specs/deployment-notification-generator/requirements.md`
-- **Tasks**: `.kiro/specs/deployment-notification-generator/tasks.md`
-- **Accessibility Testing**: `ACCESSIBILITY_TESTING_GUIDE.md`
-- **Browser Compatibility**: `BROWSER_COMPATIBILITY_TESTING_README.md`
-- **E2E Testing**: `E2E_TEST_DOCUMENTATION.md`
-- **Performance**: `PERFORMANCE_OPTIMIZATIONS.md`
-- **Deployment**: `DEPLOYMENT.md`
+1. **Pop-ups required.** The PNG opens in a new tab. If it is blocked, the
+   snackbar says so, but the image is not saved.
+2. **Nothing is downloaded.** `generateBaseFileName` produces
+   `<Application>_<Environment>_<CHG#>_<YYYYMMDD>`, which is carried through the
+   bundle and used only as a non-empty completeness guard. No file reaches the
+   user with that name.
+3. **Fixed catalog.** The nine applications are compiled into
+   `src/types/models.ts`.
+4. **Fixed template.** Changing the artifact design means editing
+   `public/templates/flight-plan.html` and rebuilding.
+5. **Dark mode only.** No light template, no theme switch.
+6. **One form at a time.** There is no queue or batch mode.
+7. **Bundle size.** The production chunk is ~750 kB raw / ~225 kB gzipped and
+   trips Vite's 500 kB warning. MUI and the date pickers dominate.
+8. **Accessibility is unverified.** The app uses semantic landmarks, labelled
+   controls, `aria-describedby` help and error targets, and a visible
+   focus-visible ring. No assistive-technology testing and no expert WCAG review
+   has been performed, so no compliance level is claimed. Full WCAG 2.1 AA
+   validation requires manual testing with real screen readers plus expert
+   review; no automated tool substitutes for it.
+9. **The per-change-item impact ceiling is summary-only.** `validateForm` emits
+   `changeItems[i].impactItems` ("Maximum of 100 Impact Items allowed") when one
+   change item exceeds 100 impacts. That error renders in the validation summary
+   as "Change Item 1 › Impact Items" but has no inline, field-adjacent home: the
+   error-splitting `useMemo` in `DeploymentForm.tsx` buckets only
+   `changeItems[i].jiraNumber` / `.description` and
+   `changeItems[i].impactItems[j].text`. Extend that `useMemo` with a
+   section-level bucket keyed by change-item id if this ever needs an inline
+   affordance. Reaching it requires 100 impacts on a single change item, so the
+   practical exposure is near zero.
 
----
+### Security notes
 
-## Contributing
-
-### Code Style
-
-- Use TypeScript strict mode
-- Follow React best practices (functional components, hooks)
-- Use Material UI components for consistency
-- Keep components small and focused
-- Use descriptive variable/function names
-
-### Commit Guidelines
-
-- Use clear, descriptive commit messages
-- Reference task numbers from spec
-- Keep commits atomic and focused
-
-### Pull Request Process
-
-1. Create feature branch: `git checkout -b feature/task-description`
-2. Make changes and commit: `git commit -m "Task 22.4: Add developer documentation"`
-3. Push to remote: `git push origin feature/task-description`
-4. Create pull request with description
-5. Ensure all tests pass
-6. Request code review
-7. Merge after approval
-
----
-
-## Support and Questions
-
-For questions or issues:
-
-1. Check existing documentation (this guide, component READMEs)
-2. Review test files for usage examples
-3. Check spec documentation for requirements
-4. Review component README files for component-specific questions
-5. Refer to design document for architecture decisions
+- All user text reaching the artifact goes through `escapeHtml` before
+  injection. The two HTML-valued tokens (`{{JIRA_ITEMS}}`, `{{CONTACT}}`) are
+  assembled from already-escaped parts.
+- `localStorage` **is** used by default for the in-progress form. The data never
+  leaves the browser, but it persists until the user clears the form or the
+  browser storage. Do not enter anything sensitive.
+- The S3 hosting configuration serves the bucket over anonymous public HTTP —
+  see the security note in [DEPLOYMENT.md](./DEPLOYMENT.md). Deploy build output
+  only.
 
 ---
 
-## Version Information
+## 8. Open items
 
-- **React**: 19.2.7
-- **TypeScript**: 7.0.2
-- **Vite**: 8.1.5
-- **Material UI**: 9.2.0
-- **Vitest**: 4.1.10
-- **Playwright**: 1.62.0
+Each of these is a known gap with a decision attached, not a bug to be fixed
+quietly.
+
+| Item | Status |
+|---|---|
+| **Named download for the PNG** | `fileNaming.ts` computes a name nothing uses. Restoring an `<a download>` click before `window.open` would make the documented naming convention real, but it changes what the user receives. Needs product sign-off. |
+| **Flight-plan template vs. its spec** | `public/templates/flight-plan.html` has drifted from `.kiro/specs/flight-plan-redesign/`: the shipped card is 600px with square corners, a base64 Southwest wordmark, and a footer stripe; the spec asks for 1100px, an 8px radius, a TOWER wordmark with a takeoff icon, a red top stripe, and explicitly no Southwest logo. The code, the template, and the rendered PNG agree with each other. Which one is authoritative needs product sign-off. |
+| **Inert `React.memo` wrappers** | Every leaf component is memoized, and every parent passes new inline arrows per render, so no memo comparison ever short-circuits. Either `useCallback` the handlers in `DeploymentForm` / `FormManager` or drop the wrappers. Doing it piecemeal risks a stale-closure bug that compiles and renders cleanly, so it needs care and manual verification. |
+| **`DeploymentInfoSection` three-way split** | Each of the three instances receives the full nine-prop surface and ignores two thirds of it. Splitting into `ChangeNumberField`, `ReleaseVersionField`, and `EnvironmentField` would remove the `*Only` flags. Behaviour-preserving but it moves rendered markup, so the four-across row and the `CHG` / `PI` adornments must be re-checked at `xs` and `sm`. |
+| **No test runner** | The highest-value additions would be pure-function tests over `injectTemplate` (no token survives injection; every field value appears in the output) and `validators.validateForm` — neither needs a DOM. Requires adding a test dependency. |
+| **No linter** | ESLint with `react-hooks` and `jsx-a11y` would have caught several defects found by manual audit, including a wrong `useCallback` dependency array and dangling `aria-describedby` targets. Requires adding dependencies. |
+| **273 kB `tower-icon.svg`** | Served as the primary favicon on every page load, roughly a third of the gzipped JS bundle. Almost certainly a traced raster; it should be re-exported or replaced with a hand-authored SVG. |
+| **Rasterization height** | `artifactGeneration.ts` uses a fixed 1600px iframe height and a 1-second fallback timer for font decoding. `html-to-image` measures the node's own box so a tall card should still capture fully, but neither bound has been stress-tested against a 20-change-item form. |
 
 ---
 
-**Last Updated**: 2025
-**Maintained By**: Development Team
+## 9. Troubleshooting
+
+**"Template load failed" banner.** The fetch of
+`/templates/flight-plan.html` failed or timed out (5 s). Click **Retry** — it
+starts a fresh attempt without a page reload. If it keeps failing, confirm the
+file exists in `dist/templates/` (it is copied from `public/`) and that the host
+serves it. The Generate button stays disabled until the template is loaded.
+
+**Generate does nothing.** Check the validation summary at the top of the form.
+Generation is blocked until every rule in
+[section 4](#4-data-model) passes.
+
+**The PNG never appears.** The browser blocked the pop-up. The snackbar reports
+it; allow pop-ups for the origin and generate again.
+
+**The form came back empty after a refresh.** The persisted payload failed
+revival and was discarded — this is the designed fail-safe. The browser console
+carries the warning.
+
+**`npm run build` fails on an unused import.** `noUnusedLocals` and
+`noUnusedParameters` are on. Remove the symbol rather than suppressing it.
+
+---
+
+## 10. Versions
+
+From `package.json`:
+
+| Package | Version |
+|---|---|
+| react / react-dom | ^19.2.7 |
+| typescript | ^7.0.2 |
+| vite | ^8.1.5 |
+| @vitejs/plugin-react | ^6.0.3 |
+| @mui/material, @mui/icons-material | ^9.2.0 |
+| @mui/x-date-pickers | ^9.10.0 |
+| date-fns | ^4.4.0 |
+| html-to-image | ^1.11.13 |
+| @emotion/react, @emotion/styled | ^11.14.x |

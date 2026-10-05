@@ -1,225 +1,154 @@
-# Deployment Notification Generator Portal
+# TOWER
 
-A React-based web application for creating deployment notification artifacts (HTML, PDF, PNG) from deployment metadata. Enables deployment coordinators to efficiently generate and manage notification artifacts for up to 5 simultaneous deployments.
+**TOWER — Takeoff Notifications for Technology Deployments.**
+
+A browser-only React application that turns deployment metadata into a single
+notification artifact: a "Flight Plan" image that a deployment coordinator can
+paste into an email or a chat channel.
+
+The coordinator fills in one deployment form, clicks **Generate Flight Plan**,
+and the app injects the form data into an authored HTML template, rasterizes it
+to a PNG, and opens the image in a new browser tab.
+
+There is no backend, no authentication, and no network call other than loading
+the app, the Open Sans web font, and the HTML template.
 
 ## Features
 
-- **Multi-Form Support**: Create and manage up to 5 deployment forms simultaneously
-- **Real-time Validation**: Instant field validation with clear error messages
-- **Multiple Output Formats**: Generate HTML (display), PDF (print), and PNG (image) artifacts
-- **Sequential Delivery**: Smart 500ms intervals between artifact generation to prevent browser throttling
-- **Collision Handling**: Automatic file name disambiguation for same-day deployments
-- **Theme Support**: Light and Dark mode HTML templates
-- **Accessibility**: WCAG 2.1 Level AA compliant with full keyboard navigation
-- **Browser Compatible**: Tested on Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
+- **One guided deployment form** covering application, change number, release
+  version, environment, schedule, outage indicator, change items with nested
+  impact statements, and contact details.
+- **Nine-application catalog** defined in `src/types/models.ts`
+  (`APPLICATION_CATALOG`).
+- **Validation on blur and on submit**, with per-field inline errors plus a
+  summary at the top of the form.
+- **Refresh-safe drafts**: the in-progress form is saved to `localStorage` under
+  the key `tower:deployment-form` and restored on load. "Start New" clears both
+  the form and the saved copy, behind a confirmation dialog.
+- **Single PNG artifact** rendered from `public/templates/flight-plan.html` and
+  opened in a new tab.
+- **Dark mode only**, following the Southwest "Jetstream" (V5+) palette, with
+  Open Sans as the only font.
 
-## Quick Links
+## Tech stack
 
-- **[Developer Guide](./docs/DEVELOPER_GUIDE.md)** - Setup, architecture, testing, and known limitations
-- **[Architecture](./docs/ARCHITECTURE.md)** - Technical architecture overview
-- **[Deployment Guide](./docs/DEPLOYMENT.md)** - Deployment instructions and hosting
-- **[Documentation Index](./docs/DOCUMENTATION_INDEX.md)** - Complete documentation reference
-- **[Design Document](/.kiro/specs/deployment-notification-generator/design.md)** - Architecture and component design
-- **[Requirements](/.kiro/specs/deployment-notification-generator/requirements.md)** - Feature requirements
+| Area | Choice |
+|---|---|
+| Framework | React 19 + TypeScript (strict) |
+| Build tool | Vite 8 (Rolldown) |
+| UI library | MUI 9 (`@mui/material`, `@mui/icons-material`, `@mui/x-date-pickers`) |
+| Dates | `date-fns` (MUI picker adapter) + `Intl.DateTimeFormat` for display |
+| Image generation | `html-to-image` |
+| Hosting | Static S3 website |
 
-## Tech Stack
-
-- **Framework**: React 18 + TypeScript
-- **Build Tool**: Vite
-- **UI Library**: Material UI (MUI) v5
-- **Testing**: Vitest + React Testing Library + Playwright
-- **PDF Generation**: html2pdf.js
-- **Image Generation**: html-to-image
-- **Date Formatting**: Intl.DateTimeFormat API
-
-## Getting Started
+## Getting started
 
 ### Prerequisites
 
-- Node.js 16+ and npm 7+
+Node.js 20.19+ or 22.12+ (Vite 8's requirement) and a matching npm. Development
+is done on Node 24.
 
-### Quick Start
+### Quick start
 
 ```bash
-# Clone and install
 git clone <repository-url>
-cd deployment-notification-generator
+cd TOWER
 npm install
-
-# Start development server
 npm run dev
-
-# Open http://localhost:5173 in browser
+# open http://localhost:5173
 ```
 
-### Build & Deploy
+## npm scripts
+
+These four are the only scripts defined in `package.json`:
+
+| Script | What it does |
+|---|---|
+| `npm run dev` | Vite dev server on port 5173 |
+| `npm run build` | `tsc -b tsconfig.build.json && vite build` → `dist/` |
+| `npm run preview` | Serve the built `dist/` locally |
+| `npm run deploy` | `aws s3 sync dist/ "s3://$DEPLOY_BUCKET" --delete` |
+
+## Verification
+
+**There is no automated test suite and no linter configured in this repository.
+`npm run build` is the verification gate** — it runs the full TypeScript project
+build (strict mode, `noUnusedLocals`, `noUncheckedIndexedAccess`) before Vite
+bundles. A change is verified when `npm run build` exits 0 and the affected
+screen has been checked in the browser under `npm run dev`.
+
+## Deployment
+
+The output is a static SPA, deployable to any static host. For the S3 setup this
+project uses — bucket configuration, the public-read policy and its security
+implications, and the build-then-deploy ordering — see
+[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md).
 
 ```bash
-# Build for production
 npm run build
-
-# Deploy to AWS S3 (requires DEPLOY_BUCKET env var)
-npm run deploy
-
-# Preview production build locally
-npm run preview
+DEPLOY_BUCKET="my-bucket-name" npm run deploy
 ```
 
-## Testing
-
-```bash
-# Run all unit and integration tests
-npm test
-
-# Run with interactive UI
-npm run test:ui
-
-# Generate coverage report
-npm run coverage
-
-# Run end-to-end tests (Playwright)
-npm run test:e2e
-
-# Run end-to-end tests (headless)
-npm run test:e2e -- --run
-
-# Debug end-to-end tests
-npm run test:e2e:debug
-```
-
-## Browser Support
-
-| Browser | Version | Support |
-|---------|---------|---------|
-| Chrome | 90+ | ✅ Tested |
-| Firefox | 88+ | ✅ Tested |
-| Safari | 14+ | ✅ Tested |
-| Edge | 90+ | ✅ Tested |
-| Internet Explorer | All | ❌ Not supported |
-
-
-
-## Architecture
-
-This project uses a **three-layer architecture**:
+## Repository layout
 
 ```
-┌──────────────────────────────────────────────────┐
-│   PRESENTATION LAYER                             │
-│   React components, form state, user interactions│
-├──────────────────────────────────────────────────┤
-│   DOMAIN LAYER                                   │
-│   Validation, formatting, template injection     │
-├──────────────────────────────────────────────────┤
-│   OUTPUT LAYER                                   │
-│   Artifact generation, delivery orchestration    │
-└──────────────────────────────────────────────────┘
-```
-
-**Key Components**:
-- `FormManager` - Manages 1-5 deployment forms
-- `DeploymentForm` - Single form with all sections
-- `OutputGenerator` - Artifact generation and delivery
-- Validation and formatting utilities in domain layer
-
-See [docs/DEVELOPER_GUIDE.md](./docs/DEVELOPER_GUIDE.md) for detailed architecture documentation.
-
-## Directory Structure
-
-```
+index.html                 # Vite entry; favicons, Open Sans, .sr-only utility
 src/
-├── components/      # React components
-├── data/            # Application catalog, form factory
-├── hooks/           # Custom React hooks
-├── types/           # TypeScript interfaces
-├── utils/           # Validators, formatters, generators
-└── App.tsx
-
-docs/                # Documentation files
-
+├── App.tsx                # Shell: header, actions, alerts, dialogs
+├── main.tsx               # React root
+├── components/            # Form sections (see Developer Guide)
+├── data/formFactory.ts     # Default form + item factories
+├── hooks/                 # Form state, validation errors, generation, reset
+├── theme/                 # AppThemeProvider + darkTokens (see theme/README.md)
+├── types/models.ts        # Domain types + APPLICATION_CATALOG
+└── utils/                 # Validation, formatting, template, artifact pipeline
 public/
-└── templates/       # HTML templates (light, dark)
-
-e2e/                 # Playwright E2E tests
+├── templates/flight-plan.html   # The one artifact template
+├── southwest-logo.svg           # App header logo
+└── favicons + site.webmanifest
+docs/                      # Developer Guide, Deployment Guide
+.kiro/specs/               # Requirements / design / tasks per feature
 ```
 
 ## Documentation
 
-### For Developers
+- **[docs/DEVELOPER_GUIDE.md](./docs/DEVELOPER_GUIDE.md)** — architecture, data
+  model, the template token contract, known limitations, and open items.
+- **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** — S3 static hosting and deploy.
+- **[src/theme/README.md](./src/theme/README.md)** — palette tokens and the
+  two-weight typography rule.
 
-- **[docs/DEVELOPER_GUIDE.md](./docs/DEVELOPER_GUIDE.md)** - Comprehensive guide covering:
-  - Project setup and build commands
-  - Architecture and component structure
-  - Testing approach and test commands
-  - Known limitations and open items
-  - Browser requirements and compatibility
-  - Deployment instructions
-  - Troubleshooting
+### Specifications
 
-- **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - Technical architecture overview
-- **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** - Deployment and hosting guide
-- **[docs/DOCUMENTATION_INDEX.md](./docs/DOCUMENTATION_INDEX.md)** - Complete documentation reference
+`.kiro/specs/` holds the requirements, design, and task breakdown for each
+feature. Current intended behaviour lives in
+[`flight-plan-redesign`](./.kiro/specs/flight-plan-redesign/requirements.md).
+[`deployment-notification-generator`](./.kiro/specs/deployment-notification-generator/requirements.md)
+is the original spec and is **superseded** — it describes multiple simultaneous
+forms, a theme selector, and PDF output, none of which exist.
+[`s3-static-hosting`](./.kiro/specs/s3-static-hosting/requirements.md) matches
+the live deploy script.
 
-### For Requirements
+## Known limitations
 
-- **[Requirements](/.kiro/specs/deployment-notification-generator/requirements.md)** - Feature requirements
-- **[Design Document](/.kiro/specs/deployment-notification-generator/design.md)** - Architecture design
-- **[Tasks](/.kiro/specs/deployment-notification-generator/tasks.md)** - Implementation tasks
-
-## Known Limitations
-
-- **No Data Persistence**: All data exists only during browser session
-- **Pop-ups Required**: HTML artifacts open in new tabs (requires pop-ups enabled)
-- **Fixed Application Catalog**: 5 predefined applications (not configurable at runtime)
-- **Keyboard-Only Date Pickers**: Date/time pickers only accept mouse/touch input
-- **Template Customization**: HTML templates fixed (must rebuild to modify)
-
-See [docs/DEVELOPER_GUIDE.md - Known Limitations](./docs/DEVELOPER_GUIDE.md#known-limitations-and-open-items) for details.
-
-## Deployment
-
-The application is a static SPA that can be deployed to any static hosting provider:
-
-```bash
-# Build
-npm run build
-
-# Deploy dist/ directory to your hosting
-# Examples: AWS S3, Netlify, Vercel, GitHub Pages
-```
-
-**AWS S3 Deployment**:
-```bash
-DEPLOY_BUCKET="my-bucket-name" npm run deploy
-```
-
-See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) for detailed deployment instructions.
+- **Pop-ups required**: the generated PNG opens in a new tab. If the pop-up is
+  blocked the app says so, but the image is not saved anywhere.
+- **No download**: nothing is written to disk. `generateBaseFileName` computes
+  an `<App>_<Env>_<CHG#>_<YYYYMMDD>` name that is carried through the artifact
+  bundle but never applied — see the open items in the Developer Guide.
+- **Fixed catalog**: the nine applications are compiled in, not configurable at
+  runtime.
+- **Fixed template**: changing the artifact design means editing
+  `public/templates/flight-plan.html` and rebuilding.
+- **Accessibility not independently validated**: the app uses semantic
+  landmarks, labelled controls, `aria-describedby` hints, and a visible focus
+  ring, but no assistive-technology testing or expert WCAG review has been
+  performed. Treat compliance as unverified.
 
 ## Contributing
 
-1. See [docs/DEVELOPER_GUIDE.md](./docs/DEVELOPER_GUIDE.md) for development setup
-2. Follow TypeScript and React best practices
-3. Ensure all tests pass: `npm test && npm run test:e2e`
-4. Create descriptive commits referencing task numbers
-5. Submit pull request for review
-
-## Support
-
-For questions or issues:
-
-1. See [docs/DEVELOPER_GUIDE.md](./docs/DEVELOPER_GUIDE.md)
-2. Review component source code in `src/components/`
-3. Check spec documentation in `.kiro/specs/`
-4. Review test files for usage examples
-
-## Version
-
-- **React**: 19.2.7
-- **TypeScript**: 7.0.2
-- **Vite**: 8.1.5
-- **Material UI**: 9.2.0
-
----
-
-**Maintained By**: Development Team  
-**Last Updated**: 2025
+1. Read [docs/DEVELOPER_GUIDE.md](./docs/DEVELOPER_GUIDE.md).
+2. Match the existing TypeScript and React conventions in the file you touch.
+3. Run `npm run build` (must exit 0) and check the affected screen in the
+   browser before opening a pull request.
+4. Reference the relevant spec and task number in the commit message.

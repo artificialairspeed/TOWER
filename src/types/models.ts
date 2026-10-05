@@ -1,6 +1,6 @@
 /**
- * Type definitions for Deployment Notification Generator Portal
- * 
+ * Type definitions for TOWER — Takeoff Notifications for Technology Deployments
+ *
  * This file contains all core data models, interfaces, and constants
  * used throughout the application.
  */
@@ -14,11 +14,6 @@
  */
 export type Environment = 'PROD' | 'QA' | 'ITEST' | 'DEV';
 
-/**
- * Theme represents the visual theme for generated artifacts
- */
-export type Theme = 'Light Mode' | 'Dark Mode';
-
 // ============================================================================
 // Application Model
 // ============================================================================
@@ -31,8 +26,6 @@ export interface Application {
   id: string;
   /** Display name of the application */
   name: string;
-  /** Header text for notification artifacts */
-  notificationHeader: string;
 }
 
 /**
@@ -42,48 +35,39 @@ export interface Application {
 export const APPLICATION_CATALOG: Application[] = [
   {
     id: 'oqs-scheduling',
-    name: 'OQS Scheduling',
-    notificationHeader: 'OQS Scheduling Deployment Notification'
+    name: 'OQS Scheduling'
   },
   {
     id: 'oqs-recordkeeping',
-    name: 'OQS Recordkeeping',
-    notificationHeader: 'OQS Recordkeeping Deployment Notification'
+    name: 'OQS Recordkeeping'
   },
   {
     id: 'oqs-simlog',
-    name: 'OQS SimLog',
-    notificationHeader: 'OQS SimLog Deployment Notification'
+    name: 'OQS SimLog'
   },
   {
     id: 'line-check-solver',
-    name: 'Line Check Solver',
-    notificationHeader: 'Line Check Solver Deployment Notification'
+    name: 'Line Check Solver'
   },
   {
     id: 'trio',
-    name: 'TRIO',
-    notificationHeader: 'TRIO Deployment Notification'
+    name: 'TRIO'
   },
   {
     id: 'rosa',
-    name: 'ROSA',
-    notificationHeader: 'ROSA Deployment Notification'
+    name: 'ROSA'
   },
   {
     id: 'idcat',
-    name: 'IDCAT',
-    notificationHeader: 'IDCAT Deployment Notification'
+    name: 'IDCAT'
   },
   {
     id: 'spt',
-    name: 'SPT',
-    notificationHeader: 'SPT Deployment Notification'
+    name: 'SPT'
   },
   {
     id: 'other',
-    name: 'Other',
-    notificationHeader: 'Other Deployment Notification'
+    name: 'Other'
   }
 ];
 
@@ -92,8 +76,28 @@ export const APPLICATION_CATALOG: Application[] = [
 // ============================================================================
 
 /**
- * ChangeItem represents a single Jira change entry
- * Requirements: 6.1, 6.2
+ * ImpactItem represents a single deployment impact entry.
+ *
+ * Impact items are children of a ChangeItem: an impact statement only exists
+ * in the context of a parent change. Adding impact items to a change is
+ * optional (a change may carry zero impact items).
+ *
+ * Requirements: 7.1, 7.3, 7.4
+ */
+export interface ImpactItem {
+  /** Unique identifier for the impact item */
+  id: string;
+  /** Impact description text (max 500 characters) */
+  text: string; // 1-500 chars
+}
+
+/**
+ * ChangeItem represents a single Jira change entry.
+ *
+ * Each change item owns a list of child impact items (its deployment impact
+ * statements). The list may be empty — attaching impacts is optional.
+ *
+ * Requirements: 6.1, 6.2, 7.1
  */
 export interface ChangeItem {
   /** Unique identifier for the change item */
@@ -102,17 +106,8 @@ export interface ChangeItem {
   jiraNumber: string; // 1-50 chars
   /** Description or title of the change (max 500 characters) */
   description: string; // 1-500 chars
-}
-
-/**
- * ImpactItem represents a single deployment impact entry
- * Requirements: 7.1, 7.3, 7.4
- */
-export interface ImpactItem {
-  /** Unique identifier for the impact item */
-  id: string;
-  /** Impact description text (max 500 characters) */
-  text: string; // 1-500 chars
+  /** Child impact items for this change (0-100 items, optional) */
+  impactItems: ImpactItem[];
 }
 
 // ============================================================================
@@ -138,18 +133,13 @@ export interface DeploymentFormData {
    */
   changeNumber: string; // up to 8 digits
   
-  /** Release version string (max 50 characters, required)
-   * Example: v5.4.1
+  /** Release version string in YYYY.#.# format (max 8 characters, required)
+   * Example: 2025.4.1
    */
-  releaseVersion: string; // max 50 chars
+  releaseVersion: string; // YYYY.#.# format, max 8 chars
   
   /** Target deployment environment (required) */
   environment: Environment | null;
-  
-  /** Computed deployment title (read-only, derived from other fields)
-   * Format: CHG##### — Application Name: Release Version
-   */
-  deploymentTitle: string;
   
   // ===== Schedule =====
   /** Deployment start date/time (required, default: today at 20:00) */
@@ -163,12 +153,8 @@ export interface DeploymentFormData {
   hasOutage: boolean;
   
   // ===== Change Items =====
-  /** List of Jira change items */
+  /** List of Jira change items. Each change item owns its own impact items. */
   changeItems: ChangeItem[];
-  
-  // ===== Impact Items =====
-  /** List of deployment impact items (1-100 items required) */
-  impactItems: ImpactItem[];
   
   // ===== Contact Information =====
   /** Contact person's name (max 255 characters, required) */
@@ -177,8 +163,8 @@ export interface DeploymentFormData {
   /** Contact person's email (max 255 characters, required, format: standard email) */
   contactEmail: string; // max 255 chars, format: email
   
-  /** Contact person's phone (max 255 characters, required, format: (###) ###-####) */
-  contactPhone: string; // max 255 chars, format: (###) ###-####
+  /** Contact person's phone (max 255 characters, optional; when provided, format: (###) ###-####). Empty string means not provided. */
+  contactPhone: string; // max 255 chars, optional, format: (###) ###-####
 }
 
 // ============================================================================
@@ -214,41 +200,13 @@ export interface ValidationResult {
 // ============================================================================
 
 /**
- * Artifact represents a single generated output file
- * Requirements: 10.4-10.7, 11.1-11.3
- */
-export interface Artifact {
-  /** ID of the form this artifact was generated from */
-  formId: string;
-  /** Type of artifact (HTML, PDF, or PNG) */
-  type: 'HTML' | 'PDF' | 'PNG';
-  /** File name for the artifact */
-  fileName: string;
-  /** Content of the artifact (HTML string for HTML, Blob for PDF/PNG) */
-  content: string | Blob;
-}
-
-/**
- * GenerationResult represents the outcome of artifact generation
- * Requirements: 10.8, 11.4, 13.3, 13.4
- */
-export interface GenerationResult {
-  /** Whether generation completed successfully for all artifacts */
-  success: boolean;
-  /** Array of successfully generated artifacts */
-  artifacts: Artifact[];
-  /** Array of errors encountered during generation */
-  errors: GenerationError[];
-}
-
-/**
  * GenerationError represents a failure during artifact generation
  */
 export interface GenerationError {
   /** ID of the form where generation failed */
   formId: string;
   /** Type of artifact that failed to generate */
-  artifactType: 'HTML' | 'PDF' | 'PNG';
+  artifactType: 'PNG';
   /** Error message describing the failure */
   message: string;
   /** Original error object (if available) */
@@ -256,12 +214,11 @@ export interface GenerationError {
 }
 
 /**
- * ArtifactBundle represents a complete set of artifacts for a single deployment form
- * 
- * Contains the generated HTML content and file names for all three artifact types.
- * Used for sequential delivery orchestration.
- * 
- * Requirements: 10.4, 11.1, 11.2, 11.3, 12.4, 14.1, 14.3
+ * ArtifactBundle represents the generated artifact input for a deployment form
+ *
+ * Contains the generated HTML content and the base file name used for delivery.
+ *
+ * Requirements: 10.4, 11.1, 11.2, 11.3, 12.4
  */
 export interface ArtifactBundle {
   /** ID of the form this bundle was generated from */
@@ -276,9 +233,10 @@ export interface ArtifactBundle {
 
 /**
  * DeliveryResult represents the outcome of artifact delivery
- * 
- * Tracks successful deliveries and failures during sequential artifact delivery.
- * 
+ *
+ * Tracks the successful delivery and any failure for the single generated
+ * artifact.
+ *
  * Requirements: 13.1, 13.2, 13.3, 13.4
  */
 export interface DeliveryResult {

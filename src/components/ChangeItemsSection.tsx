@@ -13,8 +13,8 @@
  * - 6.2: Each item requires non-empty Jira Number (1-50 chars) and Description (1-500 chars)
  * - 6.3: Show validation errors for empty fields
  * - 6.4: Remove individual items without altering others
- * - 6.5: Prevent removal when only 1 item remains
- * - 6.6: Require at least one Change_Item
+ * - 6.6: Require at least one Change_Item (enforced at form validation time,
+ *        not by blocking removal here — the list may be emptied entirely)
  * - 6.7: Display Jira Number in <strong> followed by Description
  */
 
@@ -27,41 +27,44 @@ import {
   IconButton,
   Paper,
   Alert,
-  Stack
+  Stack,
+  Chip
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { ChangeItem } from '../types/models';
+import type { ChangeItem, ImpactItem } from '../types/models';
+import { createNewChangeItem } from '../data/formFactory';
+import { ImpactSection } from './ImpactSection';
 
 /**
- * ItemNumberBadge - Circular badge displaying an item number
- * Uses green for Change Items to indicate approved changes ready to deploy
- * Distinct from the blue deployment queue position badge
+ * ItemNumberBadge - Outlined chip displaying an item number
+ * Uses the SWA blue primary accent to match the app styling; flips to a
+ * filled error chip when the row has a validation error so it stays visible
+ * against the rest of the (otherwise outlined) chip population.
  */
 interface ItemNumberBadgeProps {
   number: number;
   hasError?: boolean;
+  /** DOM id so the surrounding row can reference the badge as its label */
+  id?: string;
 }
 
-const ItemNumberBadge = memo<ItemNumberBadgeProps>(({ number, hasError = false }) => (
-  <Box
+const ItemNumberBadge = memo<ItemNumberBadgeProps>(({ number, hasError = false, id }) => (
+  <Chip
+    id={id}
+    label={number}
+    color={hasError ? 'error' : 'primary'}
+    variant={hasError ? 'filled' : 'outlined'}
     sx={{
       flexShrink: 0,
-      minWidth: 44,
-      height: 44,
-      borderRadius: '50%',
-      bgcolor: hasError ? 'error.main' : 'success.main',
-      color: 'success.contrastText',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontWeight: 'bold',
-      fontSize: '1rem',
+      fontWeight: 600,
+      fontSize: '0.9rem',
+      minWidth: 40,
+      // Match the 2px border weight used by outlined buttons (e.g. "Add Change Item")
+      borderWidth: 2
     }}
     aria-label={`Change item ${number}`}
-  >
-    {number}
-  </Box>
+  />
 ));
 
 ItemNumberBadge.displayName = 'ItemNumberBadge';
@@ -72,10 +75,13 @@ ItemNumberBadge.displayName = 'ItemNumberBadge';
 interface ChangeItemRowProps {
   item: ChangeItem;
   index: number;
-  isAtMinimum: boolean;
   errors?: { jiraNumber?: string; description?: string };
+  /** Validation errors for this change item's impact items, keyed by nested field path */
+  impactErrors?: Record<string, string>;
   onItemChange: (id: string, field: 'jiraNumber' | 'description', value: string) => void;
   onRemoveItem: (id: string) => void;
+  /** Update the impact items belonging to a specific change item */
+  onImpactItemsChange: (changeItemId: string, impactItems: ImpactItem[]) => void;
 }
 
 /**
@@ -85,13 +91,21 @@ interface ChangeItemRowProps {
 const ChangeItemRow = memo<ChangeItemRowProps>(({
   item,
   index,
-  isAtMinimum,
   errors = {},
+  impactErrors,
   onItemChange,
-  onRemoveItem
+  onRemoveItem,
+  onImpactItemsChange
 }) => {
   const hasError = !!(errors.jiraNumber || errors.description);
-  
+
+  // Stable per-row handler so the memoized ImpactSection only re-renders when
+  // this change item's impact items actually change.
+  const handleImpactItemsChange = useCallback(
+    (impactItems: ImpactItem[]) => onImpactItemsChange(item.id, impactItems),
+    [onImpactItemsChange, item.id]
+  );
+
   return (
   <Paper
     elevation={1}
@@ -105,8 +119,13 @@ const ChangeItemRow = memo<ChangeItemRowProps>(({
     aria-labelledby={`change-item-${index}-badge`}
   >
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-      {/* Item Number Badge - Icon component instead of text header */}
-      <ItemNumberBadge number={index + 1} hasError={hasError} />
+      {/* Item Number Badge - Icon component instead of text header.
+          Carries the id that the surrounding <article> is labelled by. */}
+      <ItemNumberBadge
+        id={`change-item-${index}-badge`}
+        number={index + 1}
+        hasError={hasError}
+      />
       
       <Box sx={{ flex: 1 }}>
         {/* Jira Number and Description on same line - Requirement: 6.2, 6.3 */}
@@ -118,6 +137,11 @@ const ChangeItemRow = memo<ChangeItemRowProps>(({
             value={item.jiraNumber}
             onChange={(e) => onItemChange(item.id, 'jiraNumber', e.target.value)}
             error={!!errors.jiraNumber}
+            helperText={
+              errors.jiraNumber ? (
+                <span id={`change-item-${index}-jira-error`}>{errors.jiraNumber}</span>
+              ) : undefined
+            }
             slotProps={{
               htmlInput: {
                 maxLength: 50,
@@ -137,6 +161,11 @@ const ChangeItemRow = memo<ChangeItemRowProps>(({
             value={item.description}
             onChange={(e) => onItemChange(item.id, 'description', e.target.value)}
             error={!!errors.description}
+            helperText={
+              errors.description ? (
+                <span id={`change-item-${index}-desc-error`}>{errors.description}</span>
+              ) : undefined
+            }
             slotProps={{
               htmlInput: {
                 maxLength: 500,
@@ -149,19 +178,38 @@ const ChangeItemRow = memo<ChangeItemRowProps>(({
             sx={{ flex: '0 0 75%' }}
           />
         </Box>
+
+        {/* Screen-reader hints for the two fields above. Rendered only when the
+            field is valid; the error variant is the helperText span. */}
+        {!errors.jiraNumber && (
+          <span id={`change-item-${index}-jira-help`} className="sr-only">
+            Enter the Jira ticket number for this change, for example OQS-1234
+          </span>
+        )}
+        {!errors.description && (
+          <span id={`change-item-${index}-desc-help`} className="sr-only">
+            Enter a short title or description for this change
+          </span>
+        )}
       </Box>
-      
-      {/* Remove Button - Requirements: 6.4, 6.5 */}
+
+      {/* Remove Button - Requirement: 6.4 */}
       <IconButton
         aria-label={`Remove change item ${index + 1}`}
         onClick={() => onRemoveItem(item.id)}
-        disabled={isAtMinimum}
         color="error"
-        title={isAtMinimum ? 'At least one change item is required' : undefined}
       >
         <DeleteIcon />
       </IconButton>
     </Box>
+
+    {/* Nested Impact Items - impacts are children of this change item */}
+    <ImpactSection
+      changeItemIndex={index}
+      impactItems={item.impactItems}
+      onImpactItemsChange={handleImpactItemsChange}
+      errors={impactErrors}
+    />
   </Paper>
   );
 });
@@ -175,6 +223,8 @@ export interface ChangeItemsSectionProps {
   onChange: (items: ChangeItem[]) => void;
   /** Validation errors for specific items (map of item id to error message) */
   errors?: Record<string, { jiraNumber?: string; description?: string }>;
+  /** Validation errors for nested impact items, keyed by nested field path */
+  impactErrors?: Record<string, string>;
   /** General error message for the section */
   sectionError?: string;
 }
@@ -191,6 +241,7 @@ function ChangeItemsSectionComponent({
   changeItems,
   onChange,
   errors = {},
+  impactErrors,
   sectionError
 }: ChangeItemsSectionProps) {
   /**
@@ -202,28 +253,21 @@ function ChangeItemsSectionComponent({
     if (changeItems.length >= 999) {
       return; // Already at maximum
     }
-    
-    const newItem: ChangeItem = {
-      id: `change-item-${Date.now()}-${Math.random()}`,
-      jiraNumber: '',
-      description: ''
-    };
-    
-    onChange([...changeItems, newItem]);
-  }, [changeItems.length, onChange]);
+
+    onChange([...changeItems, createNewChangeItem()]);
+  }, [changeItems, onChange]);
 
   /**
-   * Remove a change item by id (min 1 required)
-   * Requirements: 6.4, 6.5, 6.6
+   * Remove a change item by id.
+   * Requirement: 6.4
+   * The list may be emptied entirely; it starts empty by default and a card is
+   * only shown once the user adds one. The "at least one Change Item" business
+   * rule is enforced at form validation time, not by blocking removal here.
    * Memoized with useCallback (22.2: Performance optimization)
    */
   const handleRemoveItem = useCallback((id: string) => {
-    if (changeItems.length <= 1) {
-      return; // Must keep at least one item
-    }
-    
     onChange(changeItems.filter(item => item.id !== id));
-  }, [changeItems.length, onChange]);
+  }, [changeItems, onChange]);
 
   /**
    * Update a specific change item field
@@ -240,11 +284,23 @@ function ChangeItemsSectionComponent({
     );
   }, [changeItems, onChange]);
 
+  /**
+   * Update the impact items belonging to a specific change item.
+   * Only the targeted change item is modified; all others are preserved.
+   */
+  const handleImpactItemsChange = useCallback((changeItemId: string, impactItems: ImpactItem[]) => {
+    onChange(
+      changeItems.map(item =>
+        item.id === changeItemId ? { ...item, impactItems } : item
+      )
+    );
+  }, [changeItems, onChange]);
+
   // Check if at maximum items (disable Add button)
   const isAtMaximum = changeItems.length >= 999;
-  
-  // Check if at minimum items (disable Remove button)
-  const isAtMinimum = changeItems.length <= 1;
+
+  // No cards are shown until the user adds the first change item.
+  const isEmpty = changeItems.length === 0;
 
   return (
     <Box sx={{ mb: 3 }} component="section" aria-labelledby="change-items-heading">
@@ -264,6 +320,23 @@ function ChangeItemsSectionComponent({
         {changeItems.length} change {changeItems.length === 1 ? 'item' : 'items'} in the list
       </div>
       
+      {/* Empty state: no cards are shown until the user adds a change item */}
+      {isEmpty && (
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 3,
+            textAlign: 'center',
+            borderStyle: 'dashed',
+            color: 'text.secondary'
+          }}
+        >
+          <Typography variant="body2">
+            No change items yet. Select &ldquo;Add Change Item&rdquo; to add one.
+          </Typography>
+        </Paper>
+      )}
+
       <Stack spacing={2}>
         {changeItems.map((item, index) => {
           const itemErrors = errors[item.id] || {};
@@ -273,10 +346,11 @@ function ChangeItemsSectionComponent({
               key={item.id}
               item={item}
               index={index}
-              isAtMinimum={isAtMinimum}
               errors={itemErrors}
+              impactErrors={impactErrors}
               onItemChange={handleItemChange}
               onRemoveItem={handleRemoveItem}
+              onImpactItemsChange={handleImpactItemsChange}
             />
           );
         })}
@@ -288,7 +362,9 @@ function ChangeItemsSectionComponent({
         startIcon={<AddIcon />}
         onClick={handleAddItem}
         disabled={isAtMaximum}
-        sx={{ mt: 2 }}
+        aria-describedby={isAtMaximum ? 'change-items-max-message' : undefined}
+        // Explicit borderWidth so this stays in sync with the ItemNumberBadge chip's border
+        sx={{ mt: 2, borderWidth: 2 }}
         fullWidth
       >
         {isAtMaximum ? 'Maximum 999 items reached' : 'Add Change Item'}

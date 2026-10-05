@@ -11,7 +11,7 @@
  */
 
 import React from 'react';
-import { FormControl, InputLabel, Select, MenuItem, Alert, SelectChangeEvent } from '@mui/material';
+import { FormControl, InputLabel, Select, MenuItem, Alert, FormHelperText, SelectChangeEvent } from '@mui/material';
 import { Application, APPLICATION_CATALOG } from '../types/models';
 
 export interface ApplicationSelectorProps {
@@ -68,17 +68,18 @@ function ApplicationSelectorComponent({
       
       <FormControl 
         fullWidth 
+        required
         disabled={isDisabled}
         error={!!error}
       >
         <InputLabel id="application-selector-label" shrink>
-          Application *
+          Application
         </InputLabel>
         <Select
           labelId="application-selector-label"
           id="application-selector"
           value={value?.id || ''}
-          label="Application *"
+          label="Application"
           onChange={handleChange}
           // Requirement 2.8: Disable dropdown when catalog empty
           disabled={isDisabled}
@@ -99,13 +100,7 @@ function ApplicationSelectorComponent({
           ))}
         </Select>
         {error && (
-          <div 
-            style={{ color: 'inherit', fontSize: '0.75rem', marginTop: '3px', marginLeft: '14px' }}
-            id="application-selector-error"
-            role="alert"
-          >
-            {error}
-          </div>
+          <FormHelperText id="application-selector-error">{error}</FormHelperText>
         )}
         {!error && (
           <span id="application-selector-help" className="sr-only">

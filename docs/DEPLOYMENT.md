@@ -1,8 +1,9 @@
 # Deployment Guide
 
-This guide describes how to deploy the Deployment Notification Generator as a fully
-static bundle to Amazon S3 static website hosting. The application is client-side only
-and runs entirely in the browser with no server-side runtime.
+This guide describes how to deploy TOWER (Takeoff Notifications for Technology
+Deployments) as a fully static bundle to Amazon S3 static website hosting. The
+application is client-side only and runs entirely in the browser with no server-side
+runtime.
 
 ## Prerequisites
 
@@ -28,8 +29,8 @@ Before deploying, make sure the following are in place:
 
 Deployment is a two-step, ordered workflow. Always build first, then deploy.
 
-1. **Build the static bundle.** This runs `tsc -b && vite build` and produces the
-   `dist/` output directory containing the fully static site:
+1. **Build the static bundle.** This runs `tsc -b tsconfig.build.json && vite build`
+   and produces the `dist/` output directory containing the fully static site:
 
    ```bash
    npm run build
@@ -130,4 +131,4 @@ http://<bucket>.s3-website-<region>.amazonaws.com
 There is no CloudFront distribution and no CDN or HTTPS front in this setup — requests
 go straight to the S3 website endpoint over HTTP. The app is served from the bucket
 root, so the absolute asset and template paths (for example `/assets/...` and
-`/templates/light-mode.html`) resolve correctly without any base-path rewrite.
+`/templates/flight-plan.html`) resolve correctly without any base-path rewrite.

@@ -37,7 +37,7 @@ function generateItemId(): string {
  * @param minutes - Minute (0-59)
  * @returns Date object set to tomorrow at the specified time
  */
-function createDateTimeToday(hours: number, minutes: number = 0): Date {
+function createDateTimeTomorrow(hours: number, minutes: number = 0): Date {
   const date = new Date();
   date.setDate(date.getDate() + 1); // Set to tomorrow
   date.setHours(hours, minutes, 0, 0); // Set hours, minutes, seconds=0, ms=0
@@ -54,7 +54,9 @@ function createDefaultChangeItem(): ChangeItem {
   return {
     id: generateItemId(),
     jiraNumber: '',
-    description: ''
+    description: '',
+    // Impact items are optional children; a new change starts with none
+    impactItems: []
   };
 }
 
@@ -79,8 +81,7 @@ function createDefaultImpactItem(): ImpactItem {
  * - start time: 20:00 (8:00 PM)
  * - end time: 22:00 (10:00 PM)
  * - hasOutage: false
- * - one empty Change_Item
- * - one empty Impact_Item
+ * - no Change_Item entries (the user adds the first via "Add Change Item")
  * - no application/environment selected
  * - all text fields empty
  * 
@@ -100,20 +101,16 @@ export function createDefaultForm(): DeploymentFormData {
     changeNumber: '',
     releaseVersion: '',
     environment: null,
-    deploymentTitle: '', // Computed, starts empty
-    
+
     // Schedule (default: tomorrow at 20:00-22:00)
-    startDateTime: createDateTimeToday(20, 0), // 20:00 = 8:00 PM
-    endDateTime: createDateTimeToday(22, 0),   // 22:00 = 10:00 PM
+    startDateTime: createDateTimeTomorrow(20, 0), // 20:00 = 8:00 PM
+    endDateTime: createDateTimeTomorrow(22, 0),   // 22:00 = 10:00 PM
     
     // Outage Information (default: no outage)
     hasOutage: false,
     
-    // Change Items (default: one empty item)
-    changeItems: [createDefaultChangeItem()],
-    
-    // Impact Items (default: one empty item)
-    impactItems: [createDefaultImpactItem()],
+    // Change Items (default: none; a card is only added when the user clicks "Add Change Item")
+    changeItems: [],
     
     // Contact Information (all empty)
     contactName: '',

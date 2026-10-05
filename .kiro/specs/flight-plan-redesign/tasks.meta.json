@@ -1,0 +1,261 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Create `public/templates/flight-plan.html` structure and inline styling": [
+      {
+        "executionId": "5142a2b5-345a-4750-88e1-d101b3df0bc7",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979620363
+      },
+      {
+        "executionId": "5142a2b5-345a-4750-88e1-d101b3df0bc7",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979631537
+      },
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979979149
+      }
+    ],
+    "1.2 Embed Open Sans via base64 `@font-face` in `public/templates/flight-plan.html`": [
+      {
+        "executionId": "5142a2b5-345a-4750-88e1-d101b3df0bc7",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979620388
+      },
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790980083644
+      },
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790980467946
+      }
+    ],
+    "2.1 Rewrite `src/utils/templateProvider.ts` for one template": [
+      {
+        "executionId": "5142a2b5-345a-4750-88e1-d101b3df0bc7",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979620424
+      },
+      {
+        "executionId": "5142a2b5-345a-4750-88e1-d101b3df0bc7",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979631682
+      },
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979980176
+      }
+    ],
+    "3.1 Drop theme branching in `htmlGenerator.generateHTML`": [
+      {
+        "executionId": "5142a2b5-345a-4750-88e1-d101b3df0bc7",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979620447
+      },
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979991018
+      },
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790980075160
+      }
+    ],
+    "4.1 Drop the themeKey branch in the async `generateHTML`": [
+      {
+        "executionId": "5142a2b5-345a-4750-88e1-d101b3df0bc7",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979620466
+      },
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979991975
+      },
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790980076561
+      }
+    ],
+    "5.1 Delete `public/templates/light-mode.html` and `public/templates/dark-mode.html`": [
+      {
+        "executionId": "5142a2b5-345a-4750-88e1-d101b3df0bc7",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979620487
+      },
+      {
+        "executionId": "5142a2b5-345a-4750-88e1-d101b3df0bc7",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979633147
+      },
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979981163
+      }
+    ],
+    "6.1 Update `docs/REPOSITORY_CLEANUP_SUMMARY.md`": [
+      {
+        "executionId": "5142a2b5-345a-4750-88e1-d101b3df0bc7",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979620508
+      },
+      {
+        "executionId": "5142a2b5-345a-4750-88e1-d101b3df0bc7",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979634085
+      },
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979982567
+      }
+    ],
+    "6.2 Update `docs/DEVELOPER_GUIDE.md`": [
+      {
+        "executionId": "5142a2b5-345a-4750-88e1-d101b3df0bc7",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979620529
+      },
+      {
+        "executionId": "5142a2b5-345a-4750-88e1-d101b3df0bc7",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979635084
+      },
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979804946
+      },
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979867967
+      },
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979983409
+      }
+    ],
+    "6.3 Update `docs/DEPLOYMENT.md`": [
+      {
+        "executionId": "5142a2b5-345a-4750-88e1-d101b3df0bc7",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979620560
+      },
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979987414
+      },
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790980077522
+      }
+    ],
+    "6.4 Update `docs/ARCHITECTURE.md`": [
+      {
+        "executionId": "5142a2b5-345a-4750-88e1-d101b3df0bc7",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979620576
+      },
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979988675
+      },
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790980078832
+      }
+    ],
+    "6.5 Update `src/theme/README.md`": [
+      {
+        "executionId": "5142a2b5-345a-4750-88e1-d101b3df0bc7",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979620595
+      },
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979989619
+      },
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790980079760
+      }
+    ],
+    "7. Build and manual verification": [
+      {
+        "executionId": "5142a2b5-345a-4750-88e1-d101b3df0bc7",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979620616
+      },
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790980471506
+      },
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790980565436
+      }
+    ],
+    "2. Collapse the template loader to a single cached template": [
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979980206
+      }
+    ],
+    "5. Retire the old templates": [
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790979981201
+      }
+    ],
+    "3. Simplify `src/utils/htmlGenerator.ts` (synchronous delivery path)": [
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790980075192
+      }
+    ],
+    "4. Simplify `src/utils/artifactGeneration.ts` (async generator, off delivery path)": [
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790980076603
+      }
+    ],
+    "6. Reconcile documentation references": [
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790980079798
+      }
+    ],
+    "1. Author the single Flight Plan template": [
+      {
+        "executionId": "34921cdc-24a5-4fa9-afa5-7d65e2b7733a",
+        "chatSessionId": "sess_e0f778c5-b154-451e-add8-4062b33e9a3e",
+        "timestamp": 1790980467972
+      }
+    ]
+  }
+}

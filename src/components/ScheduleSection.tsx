@@ -16,6 +16,7 @@ import {
   Box,
   Typography,
   FormControl,
+  FormLabel,
   RadioGroup,
   FormControlLabel,
   Radio,
@@ -76,7 +77,7 @@ function ScheduleSectionComponent({
           {/* Deployment Start DateTimePicker - Requirements: 4.1, 4.2, 4.3 */}
           <Box sx={{ flex: 1 }}>
             <DateTimePicker
-              label="Deployment Start *"
+              label="Deployment Start"
               value={startDateTime}
               onChange={onStartDateTimeChange}
               ampm={false}
@@ -84,7 +85,8 @@ function ScheduleSectionComponent({
                 textField: {
                   fullWidth: true,
                   required: true,
-                  error: !!startDateTimeError
+                  error: !!startDateTimeError,
+                  helperText: startDateTimeError
                 },
                 field: {
                   'aria-label': 'Deployment start date and time',
@@ -111,7 +113,7 @@ function ScheduleSectionComponent({
           {/* Deployment End DateTimePicker - Requirements: 4.1, 4.4, 4.6 */}
           <Box sx={{ flex: 1 }}>
             <DateTimePicker
-              label="Deployment End *"
+              label="Deployment End"
               value={endDateTime}
               onChange={onEndDateTimeChange}
               ampm={false}
@@ -119,7 +121,8 @@ function ScheduleSectionComponent({
                 textField: {
                   fullWidth: true,
                   required: true,
-                  error: !!endDateTimeError
+                  error: !!endDateTimeError,
+                  helperText: endDateTimeError
                 },
                 field: {
                   'aria-label': 'Deployment end date and time',
@@ -148,17 +151,21 @@ function ScheduleSectionComponent({
             <Chip
               label="Outage Associated"
               sx={{
-                backgroundColor: 'error.main',
-                color: 'error.contrastText',
+                backgroundColor: hasOutage ? 'error.main' : 'success.main',
+                color: 'black',
                 fontWeight: 600,
                 fontSize: '0.875rem',
                 height: '32px'
               }}
             />
             <FormControl size="small" component="fieldset">
+              <FormLabel component="legend" id="outage-legend" className="sr-only">
+                Outage associated
+              </FormLabel>
               <RadioGroup
                 row
-                aria-label="Outage selector"
+                aria-labelledby="outage-legend"
+                aria-describedby="outage-help"
                 name="outage-selector"
                 value={hasOutage ? 'yes' : 'no'}
                 onChange={handleOutageChange}

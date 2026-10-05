@@ -1,191 +1,151 @@
 /**
  * useFormManager Hook
- * 
- * Manages the lifecycle of deployment form instances:
- * - Adding new forms (max 5)
- * - Removing forms (min 1)
+ *
+ * Manages the lifecycle of the single deployment form instance:
  * - Updating form data
- * - Resetting forms with confirmation
- * 
- * Requirements: 1.1-1.11
+ * - Clearing the form back to defaults (requires confirmation from caller)
+ *
+ * The application supports exactly one deployment form.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { DeploymentFormData } from '../types/models';
 import { createDefaultForm } from '../data/formFactory';
+import { loadForm, saveForm, clearForm as clearPersistedForm } from '../utils/formPersistence';
+
+/**
+ * How long to wait after the last edit before writing the form to storage.
+ * Long enough to coalesce a burst of keystrokes, so typing does not stall on a
+ * synchronous serialize of the whole form. A debounced write on its own would
+ * lose an edit made inside this window if the page went away, so the
+ * persistence effect also flushes synchronously on page teardown.
+ */
+const PERSIST_DEBOUNCE_MS = 400;
 
 /**
  * Return type for useFormManager hook
  */
 export interface FormManagerState {
-  /** Array of all deployment forms */
-  forms: DeploymentFormData[];
+  /** The single deployment form */
+  form: DeploymentFormData;
+
+  /** Update the form with partial updates */
+  updateForm: (updates: Partial<DeploymentFormData>) => void;
 
   /**
-   * ID of the most recently added (or initial) form. Used by the UI to
-   * auto-expand the newest row so the user can edit it immediately.
+   * Clear the form and start fresh with a single empty form. Also clears the
+   * persisted copy so the cleared state survives a refresh. Confirmation should
+   * be handled by the caller.
    */
-  lastAddedFormId: string | null;
-
-  /** Add a new form (max 5 forms) */
-  addForm: () => void;
-  
-  /** Remove a form by ID (min 1 form must remain) */
-  removeForm: (formId: string) => void;
-  
-  /** Update a form with partial updates */
-  updateForm: (formId: string, updates: Partial<DeploymentFormData>) => void;
-  
-  /** Reset a form to default values (requires confirmation from caller) */
-  resetForm: (formId: string) => void;
-  
-  /** Whether adding a new form is allowed (false when at max 5) */
-  canAddForm: boolean;
-  
-  /** Whether removing a form is allowed (false when at min 1) */
-  canRemoveForm: boolean;
+  clearForm: () => void;
 }
 
 /**
- * Maximum number of deployment forms allowed
- * Requirement: 1.4
+ * Options for configuring the form manager hook.
  */
-const MAX_FORMS = 5;
+export interface UseFormManagerOptions {
+  /**
+   * Whether to persist the form to browser storage and rehydrate it on load so
+   * data survives a page refresh. Defaults to `true`.
+   */
+  persist?: boolean;
+}
 
 /**
- * Minimum number of deployment forms required
- * Requirement: 1.8
+ * Custom hook for managing the deployment form instance.
+ *
+ * Initial state: the persisted form from a previous session if available,
+ * otherwise a fresh default form.
+ *
+ * When persistence is enabled, the current form is written to browser storage
+ * shortly after each change — and synchronously on page teardown — so a page
+ * refresh restores exactly what the user had entered.
+ *
+ * @returns FormManagerState with the form and control methods
  */
-const MIN_FORMS = 1;
+export function useFormManager(options: UseFormManagerOptions = {}): FormManagerState {
+  const { persist = true } = options;
 
-/**
- * Custom hook for managing deployment form instances
- * 
- * Initial state: one default form (Requirement 1.1)
- * 
- * Methods:
- * - addForm(): Creates new form (max 5) - Requirements 1.2, 1.3, 1.4
- * - removeForm(formId): Removes form (min 1) - Requirements 1.6, 1.7, 1.8
- * - updateForm(formId, updates): Updates form data preserving other fields
- * - resetForm(formId): Resets form to defaults - Requirements 1.9, 1.10
- * 
- * All operations preserve other forms' values during add/remove operations
- * (Requirements 1.3, 1.7)
- * 
- * @returns FormManagerState with forms array and control methods
- */
-export function useFormManager(): FormManagerState {
-  // Initialize with one default form (Requirement 1.1)
-  const [forms, setForms] = useState<DeploymentFormData[]>(() => [createDefaultForm()]);
+  // Initialize from persisted storage when available, otherwise a fresh default
+  // form. Rehydration is fail-safe: a corrupt payload yields null and we fall
+  // back to the default.
+  const [form, setForm] = useState<DeploymentFormData>(() => {
+    if (persist) {
+      const restored = loadForm();
+      if (restored) return restored;
+    }
+    return createDefaultForm();
+  });
 
-  // Track the newest form so the UI can auto-expand it. Starts null so that on
-  // initial load / refresh every form renders collapsed; only forms the user
-  // adds during the session are auto-expanded.
-  const [lastAddedFormId, setLastAddedFormId] = useState<string | null>(null);
-  
+  // Persist the current form whenever it changes so entered data survives a
+  // page refresh. Best-effort — see formPersistence for failure handling.
+  //
+  // The write is debounced because `form` is replaced on every keystroke and
+  // localStorage.setItem is synchronous: serializing the whole form (including
+  // every change item and impact item) on each character is a visible typing
+  // stall on a large form. The pending timer is cleared on unmount and before
+  // each re-run, so a cleared form can never be resurrected by a stale write —
+  // clearForm removes the key and then sets a fresh form, which schedules its
+  // own write.
+  //
+  // Teardown flushes the pending write synchronously so an edit made inside the
+  // debounce window is not lost to a refresh, a tab close, or (on mobile) the
+  // app being backgrounded. `pagehide` covers all three, unlike `beforeunload`;
+  // a hidden `visibilitychange` is the backstop for the cases where `pagehide`
+  // does not fire. The effect re-runs on every `form` change, so the handler
+  // always closes over the current value, and the timer is cleared before the
+  // flush so the write does not happen twice.
+  useEffect(() => {
+    if (!persist) return;
+
+    const timer = setTimeout(() => saveForm(form), PERSIST_DEBOUNCE_MS);
+
+    const flush = () => {
+      clearTimeout(timer);
+      saveForm(form);
+    };
+    const flushIfHidden = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', flushIfHidden);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', flushIfHidden);
+    };
+  }, [form, persist]);
+
   /**
-   * Add a new deployment form
-   * Requirements: 1.2, 1.3, 1.4
-   * 
-   * - Creates new form when fewer than 5 forms exist (1.2)
-   * - Displays new form alongside existing forms without modifying existing values (1.3)
-   * - Rejects addition when 5 forms already exist (1.4)
+   * Update the deployment form with partial updates, preserving all other
+   * fields.
    */
-  const addForm = useCallback(() => {
-    setForms((currentForms) => {
-      // Reject if at maximum capacity (Requirement 1.4)
-      if (currentForms.length >= MAX_FORMS) {
-        console.warn(`Cannot add form: maximum of ${MAX_FORMS} forms reached`);
-        return currentForms;
-      }
-      
-      // Create new form and add to array (Requirements 1.2, 1.3)
-      // Existing forms remain unchanged, preserving all entered values
-      const newForm = createDefaultForm();
-      // Mark this form as the newest so the UI auto-expands it
-      setLastAddedFormId(newForm.formId);
-      return [...currentForms, newForm];
-    });
+  const updateForm = useCallback((updates: Partial<DeploymentFormData>) => {
+    setForm((current) => ({ ...current, ...updates }));
   }, []);
-  
+
   /**
-   * Remove a deployment form by ID
-   * Requirements: 1.6, 1.7, 1.8
-   * 
-   * - Removes the specified form and all its data (1.7)
-   * - Retains all values in remaining forms (1.7)
-   * - Rejects removal when only 1 form exists (1.8)
+   * Clear the form and start fresh with a single empty form.
+   *
+   * Discards the persisted copy first so the cleared state is authoritative,
+   * then replaces the form with a new default. The persistence effect re-saves
+   * this fresh form, so a subsequent refresh restores the empty form rather
+   * than the cleared data.
+   *
+   * Note: Confirmation should be handled by the caller before invoking this.
    */
-  const removeForm = useCallback((formId: string) => {
-    setForms((currentForms) => {
-      // Reject if at minimum capacity (Requirement 1.8)
-      if (currentForms.length <= MIN_FORMS) {
-        console.warn(`Cannot remove form: minimum of ${MIN_FORMS} form required`);
-        return currentForms;
-      }
-      
-      // Remove the specified form (Requirement 1.7)
-      // All other forms remain unchanged, preserving their entered values
-      return currentForms.filter(form => form.formId !== formId);
-    });
-  }, []);
-  
-  /**
-   * Update a deployment form with partial updates
-   * 
-   * Allows updating specific fields of a form without affecting other fields
-   * or other forms. This preserves data integrity during field updates.
-   */
-  const updateForm = useCallback((formId: string, updates: Partial<DeploymentFormData>) => {
-    setForms((currentForms) => {
-      return currentForms.map(form => {
-        if (form.formId === formId) {
-          // Apply updates while preserving all other fields
-          return { ...form, ...updates };
-        }
-        // Other forms remain completely unchanged
-        return form;
-      });
-    });
-  }, []);
-  
-  /**
-   * Reset a deployment form to default values
-   * Requirements: 1.9, 1.10
-   * 
-   * - Clears all entered values (1.10)
-   * - Restores each field to the same default value it held when first created (1.10)
-   * 
-   * Note: Confirmation prompt should be handled by the caller before calling this method
-   * (Requirement 1.9). If caller receives cancellation, they should not call resetForm.
-   */
-  const resetForm = useCallback((formId: string) => {
-    setForms((currentForms) => {
-      return currentForms.map(form => {
-        if (form.formId === formId) {
-          // Create a fresh form with default values, preserving only the formId
-          const defaultForm = createDefaultForm();
-          // Keep the original form ID to maintain form identity
-          return { ...defaultForm, formId: form.formId };
-        }
-        // Other forms remain completely unchanged
-        return form;
-      });
-    });
-  }, []);
-  
-  // Calculate derived state
-  const canAddForm = forms.length < MAX_FORMS; // Requirement 1.2, 1.4
-  const canRemoveForm = forms.length > MIN_FORMS; // Requirement 1.6, 1.8
-  
+  const clearForm = useCallback(() => {
+    if (persist) {
+      clearPersistedForm();
+    }
+    setForm(createDefaultForm());
+  }, [persist]);
+
   return {
-    forms,
-    lastAddedFormId,
-    addForm,
-    removeForm,
+    form,
     updateForm,
-    resetForm,
-    canAddForm,
-    canRemoveForm
+    clearForm,
   };
 }

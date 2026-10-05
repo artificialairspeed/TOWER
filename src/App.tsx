@@ -8,15 +8,21 @@ import {
   Snackbar,
   Button,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import {
-  FlightTakeoff as AppIcon,
   CloudDownload as GenerateIcon,
+  RestartAlt as ClearIcon,
 } from '@mui/icons-material';
 import { FormManager } from './components/FormManager';
 import { AppThemeProvider, darkTokens } from './theme/AppThemeProvider';
 import { useValidationErrors } from './hooks/useValidationErrors';
 import { useFormManager } from './hooks/useFormManager';
+import { useResetConfirmation } from './hooks/useResetConfirmation';
 import { useOutputGenerator } from './hooks/useOutputGenerator';
 import { APPLICATION_CATALOG } from './types/models';
 import { templateProvider } from './utils/templateProvider';
@@ -28,7 +34,7 @@ import { validateFieldOnBlur } from './utils/validators';
  * Provides the overall structure of the portal:
  * 1. Header with title
  * 2. Empty catalog warning (if applicable)
- * 3. Form manager with all deployment forms
+ * 3. Form manager with the deployment form
  * 4. Generate Outputs action + result notifications
  *
  * The portal UI (and all generated artifacts) are dark-mode only.
@@ -42,22 +48,12 @@ import { validateFieldOnBlur } from './utils/validators';
  * - 13.3, 13.4: Error reporting and recovery
  */
 function App() {
-  // Portal UI is always in Dark Mode (app + outputs)
-  const theme = 'Dark Mode' as const;
-
-  // Form management hook — single source of truth (Requirements: 1.1-1.11)
-  const {
-    forms,
-    lastAddedFormId,
-    addForm,
-    removeForm,
-    updateForm,
-    canAddForm,
-    canRemoveForm,
-  } = useFormManager();
+  // Form management hook — single source of truth
+  const { form, updateForm, clearForm } = useFormManager();
 
   // Validation error management hook
-  const { getAllErrors, clearFieldError, setErrors, setFieldError } = useValidationErrors();
+  const { getAllErrors, clearFieldError, setErrors, setFieldError, clearAllErrors } =
+    useValidationErrors();
 
   // Output generation hook (Requirements: 10.1-10.8, 13.1-13.4)
   const {
@@ -67,8 +63,27 @@ function App() {
     generateOutputs,
     clearResults,
     isGenerating,
-    progress,
   } = useOutputGenerator();
+
+  // Reset handler for "Start New": clearing the form must also clear any
+  // outstanding validation state so the user truly returns to a blank slate.
+  // This wipes form data, per-field validation errors, and the generation
+  // validation summary / delivery results in one step.
+  const handleStartNew = React.useCallback(() => {
+    clearForm();
+    clearAllErrors();
+    clearResults();
+  }, [clearForm, clearAllErrors, clearResults]);
+
+  // Confirmation flow for clearing the form and starting fresh. The reset is
+  // destructive (discards entered + persisted data), so it is gated behind a
+  // confirmation dialog.
+  const {
+    isOpen: isClearConfirmOpen,
+    initiateReset: initiateClear,
+    confirmReset: confirmClear,
+    cancelReset: cancelClear,
+  } = useResetConfirmation('form', handleStartNew);
 
   // Check if application catalog is empty (Requirements: 2.7, 2.8)
   const isCatalogEmpty = APPLICATION_CATALOG.length === 0;
@@ -124,11 +139,11 @@ function App() {
 
   /**
    * Handle Generate Outputs button click.
-   * Generates from the same `forms` the user is editing.
+   * Generates from the same `form` the user is editing.
    */
-  const handleGenerateOutputs = async () => {
-    await generateOutputs(forms, theme, isCatalogEmpty);
-  };
+  const handleGenerateOutputs = React.useCallback(async () => {
+    await generateOutputs(form, isCatalogEmpty);
+  }, [generateOutputs, form, isCatalogEmpty]);
 
   // Update validation errors when validation fails
   React.useEffect(() => {
@@ -140,7 +155,7 @@ function App() {
   const generationSucceeded = deliveryResult?.failed === 0;
 
   return (
-    <AppThemeProvider theme={theme}>
+    <AppThemeProvider>
       {/* App Header */}
       <Box
         component="header"
@@ -161,28 +176,63 @@ function App() {
               gap: 2,
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <AppIcon color="primary" sx={{ fontSize: { xs: 48, sm: 56 } }} aria-hidden="true" />
-              <Box>
-                <Typography variant="h5" component="h1" sx={{ fontWeight: 900, lineHeight: 1.2 }}>
-                  TOWER
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Takeoff Notifications for Technology Deployments
-                </Typography>
-              </Box>
-            </Box>
-
-            {/* Generate Flight Plan - Requirement: 10.1 */}
             <Box
               sx={{
                 display: 'flex',
                 flexDirection: 'column',
-                alignItems: { xs: 'flex-start', sm: 'flex-end' },
-                gap: 0.5,
+                alignItems: 'center',
+                gap: 1,
+              }}
+            >
+              <Box
+                component="img"
+                src="/southwest-logo.svg"
+                alt="Southwest"
+                sx={{
+                  height: { xs: 30, sm: 36 },
+                  width: 'auto',
+                  display: 'block',
+                  flexShrink: 0,
+                }}
+              />
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="h5" component="h1" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
+                  TOWER
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* Header actions: Start New (clear) + Generate Flight Plan */}
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 1.5,
                 ml: 'auto',
               }}
             >
+              {/* Clear the form and start fresh */}
+              <Button
+                variant="outlined"
+                color="inherit"
+                startIcon={<ClearIcon />}
+                onClick={initiateClear}
+                disabled={isGenerating}
+                aria-label="Clear the form and start over"
+                data-testid="clear-forms-button"
+              >
+                Start New
+              </Button>
+
+              {/* Generate Flight Plan - Requirement: 10.1 */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: { xs: 'flex-start', sm: 'flex-end' },
+                  gap: 0.5,
+                }}
+              >
               <Button
                 variant="contained"
                 color="primary"
@@ -194,13 +244,15 @@ function App() {
                   )
                 }
                 onClick={handleGenerateOutputs}
-                disabled={isCatalogEmpty || isGenerating}
+                disabled={isCatalogEmpty || isGenerating || !templatesReady}
                 aria-label={
                   isCatalogEmpty
                     ? 'Cannot generate outputs: application catalog is empty'
+                    : !templatesReady
+                    ? 'Cannot generate outputs: the flight plan template is still loading'
                     : isGenerating
                     ? 'Generating outputs, please wait'
-                    : 'Generate HTML, PDF, and PNG outputs for all forms'
+                    : 'Generate the deployment notification output'
                 }
                 aria-busy={isGenerating}
                 data-testid="generate-outputs-button"
@@ -223,6 +275,7 @@ function App() {
                   No applications available
                 </Typography>
               )}
+              </Box>
             </Box>
           </Box>
         </Container>
@@ -283,26 +336,18 @@ function App() {
             <AlertTitle>Validation failed</AlertTitle>
             {validationResult.errors.length} issue
             {validationResult.errors.length !== 1 ? 's' : ''} need
-            {validationResult.errors.length === 1 ? 's' : ''} attention. Expand the highlighted
-            form{forms.length > 1 ? 's' : ''} to review and correct the fields before generating
-            outputs.
+            {validationResult.errors.length === 1 ? 's' : ''} attention. Review and correct the
+            highlighted fields before generating outputs.
           </Alert>
         )}
 
         {/* Form Manager — single source of truth for form state */}
         <FormManager
-          forms={forms}
-          lastAddedFormId={lastAddedFormId}
-          onAddForm={addForm}
-          onRemoveForm={removeForm}
+          form={form}
           onUpdateForm={updateForm}
-          canAddForm={canAddForm}
-          canRemoveForm={canRemoveForm}
           validationErrors={getAllErrors()}
           onClearFieldError={clearFieldError}
           onBlurValidate={handleBlurValidate}
-          isGenerating={isGenerating}
-          progress={progress}
         />
 
         {/* Success / partial-failure notification (Requirements: 10.8, 13.3, 13.4)
@@ -331,9 +376,9 @@ function App() {
           >
             {deliveryResult && (
               <>
-                <AlertTitle sx={{ fontWeight: 'bold' }}>
+                <AlertTitle sx={{ fontWeight: 600 }}>
                   {generationSucceeded
-                    ? `${deliveryResult.successful} Flight Plans Dispatched`
+                    ? 'Flight Plan Dispatched'
                     : `Generated ${deliveryResult.successful} of ${deliveryResult.total} artifacts`}
                 </AlertTitle>
 
@@ -347,8 +392,7 @@ function App() {
                   <Box component="ul" sx={{ mt: 1, mb: 0, pl: 2 }}>
                     {deliveryResult.errors.map((error, index) => (
                       <li key={index}>
-                        Failed to generate {error.artifactType} for form {error.formId}:{' '}
-                        {error.message}
+                        Failed to generate {error.artifactType}: {error.message}
                       </li>
                     ))}
                   </Box>
@@ -357,6 +401,38 @@ function App() {
             )}
           </Alert>
         </Snackbar>
+
+        {/* Clear-form confirmation. Clearing discards all entered data and the
+            copy saved in the browser, so the user must confirm before it
+            happens. */}
+        <Dialog
+          open={isClearConfirmOpen}
+          onClose={cancelClear}
+          aria-labelledby="clear-forms-dialog-title"
+          aria-describedby="clear-forms-dialog-description"
+        >
+          <DialogTitle id="clear-forms-dialog-title">Start a new form?</DialogTitle>
+          <DialogContent>
+            <DialogContentText id="clear-forms-dialog-description">
+              This clears the deployment form and the data saved in your browser,
+              returning you to an empty form. This can&apos;t be undone.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={cancelClear} color="inherit" data-testid="clear-forms-cancel">
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmClear}
+              color="error"
+              variant="contained"
+              autoFocus
+              data-testid="clear-forms-confirm"
+            >
+              Clear form
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Container>
     </AppThemeProvider>
   );

@@ -1,61 +1,68 @@
 /**
  * ImpactSection Component
- * 
- * Provides UI for managing deployment impact items:
- * - Display list of Impact_Item entries with Add/Remove controls
+ *
+ * Nested sub-section for managing the impact items that belong to a single
+ * Change Item. Impact items are children of a change item, so this section is
+ * rendered inside each change item row rather than as a standalone top-level
+ * section.
+ *
+ * Behavior:
+ * - Display the parent change item's impact items with Add/Remove controls
  * - Each item: single-line text field for impact text (max 500 chars)
- * - Add button creates new item (max 100 total)
- * - Remove button deletes item (min 1 required)
+ * - Add button creates a new item (max 100 per change item)
+ * - Remove button deletes an item (impacts are optional, so removing the last
+ *   one is allowed — a change item may carry zero impact items)
  * - Disable Add at 100 items, show message "Maximum 100 impact items reached"
- * - Disable Remove when only 1 item remains
  * - Show validation errors for empty text or text > 500 chars
  * - Preserve insertion order for rendering
- * 
+ *
  * Performance optimizations:
- * - Extracted ImpactItemRow component and wrapped with React.memo (22.2)
- * - Parent component wrapped with React.memo (22.2: Performance optimization)
- * - Callbacks memoized with useCallback (22.2: Performance optimization)
- * 
+ * - Extracted ImpactItemRow component and wrapped with React.memo
+ * - Parent component wrapped with React.memo
+ * - Callbacks memoized with useCallback
+ *
  * Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8
  */
 
 import { useCallback, memo } from 'react';
-import { Box, Typography, TextField, Button, IconButton, Alert, Paper } from '@mui/material';
+import { Box, Typography, TextField, Button, IconButton, Alert, Chip } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import type { ImpactItem } from '../types/models';
+import { createNewImpactItem } from '../data/formFactory';
+
+/** Maximum number of impact items allowed per change item */
+const MAX_IMPACT_ITEMS = 100;
 
 /**
- * ItemNumberBadge - Circular badge displaying an item number
- * Uses amber to indicate impact/consequences of the deployment
- * Matches the design of the deployment queue position badge
+ * ImpactNumberBadge - Small outlined chip displaying an impact item's number.
+ * A compact red counterpart to the change item's blue ItemNumberBadge; it
+ * echoes the red the impacts render with in the output. Decorative only — the
+ * impact text field already announces its position to screen readers, so the
+ * badge is aria-hidden to avoid a duplicate announcement.
  */
-interface ItemNumberBadgeProps {
+interface ImpactNumberBadgeProps {
   number: number;
-  hasError?: boolean;
 }
 
-const ItemNumberBadge = memo<ItemNumberBadgeProps>(({ number, hasError = false }) => (
-  <Box
+const ImpactNumberBadge = memo<ImpactNumberBadgeProps>(({ number }) => (
+  <Chip
+    aria-hidden="true"
+    label={number}
+    color="error"
+    variant="outlined"
+    size="small"
     sx={{
       flexShrink: 0,
-      minWidth: 44,
-      height: 44,
-      borderRadius: '50%',
-      bgcolor: hasError ? 'error.main' : 'warning.main',
-      color: 'warning.contrastText',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontWeight: 'bold',
-      fontSize: '1rem',
+      fontWeight: 600,
+      fontSize: '0.7rem',
+      minWidth: 28,
+      // Match the 2px border weight used by outlined buttons (e.g. "Add Change Item")
+      borderWidth: 2
     }}
-    aria-label={`Impact item ${number}`}
-  >
-    {number}
-  </Box>
+  />
 ));
 
-ItemNumberBadge.displayName = 'ItemNumberBadge';
+ImpactNumberBadge.displayName = 'ImpactNumberBadge';
 
 /**
  * Props for individual impact item row
@@ -63,7 +70,8 @@ ItemNumberBadge.displayName = 'ItemNumberBadge';
 interface ImpactItemRowProps {
   item: ImpactItem;
   index: number;
-  isAtMinCapacity: boolean;
+  /** DOM-id prefix unique to the parent change item (keeps ARIA ids unique) */
+  idPrefix: string;
   error?: string;
   onTextChange: (itemId: string, newText: string) => void;
   onRemoveItem: (itemId: string) => void;
@@ -71,12 +79,12 @@ interface ImpactItemRowProps {
 
 /**
  * ImpactItemRow - Individual row component for a single impact item
- * Memoized with React.memo to prevent re-renders of other rows (22.2: Performance)
+ * Memoized with React.memo to prevent re-renders of other rows
  */
 const ImpactItemRow = memo<ImpactItemRowProps>(({
   item,
   index,
-  isAtMinCapacity,
+  idPrefix,
   error,
   onTextChange,
   onRemoveItem
@@ -84,188 +92,177 @@ const ImpactItemRow = memo<ImpactItemRowProps>(({
   const hasError = !!error;
 
   return (
-    <Paper
-      elevation={1}
-      sx={{
-        p: 2,
-        border: '1px solid',
-        borderColor: hasError ? 'error.main' : 'divider',
-        borderRadius: 1,
-        mb: 2
-      }}
-      component="article"
-      aria-labelledby={`impact-item-${index}-badge`}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        {/* Item Number Badge - Icon component */}
-        <ItemNumberBadge number={index + 1} hasError={hasError} />
-        
-        {/* Impact text field - single line, no wrapping - Requirements: 7.3, 7.4 */}
-        <TextField
-          placeholder="Impacts *"
-          value={item.text}
-          onChange={(e) => onTextChange(item.id, e.target.value)}
-          fullWidth
-          required
-          error={hasError}
-          slotProps={{
-            htmlInput: {
-              maxLength: 500,
-              'aria-label': `Impact item ${index + 1} description`,
-              'aria-describedby': error ? `impact-item-${index}-error` : `impact-item-${index}-help`,
-              'aria-invalid': hasError,
-              style: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
-            }
-          }}
-        />
-        
-        {/* Remove button - Requirements: 7.5, 7.6 */}
-        <IconButton
-          onClick={() => onRemoveItem(item.id)}
-          disabled={isAtMinCapacity}
-          color="error"
-          aria-label={`Remove impact item ${index + 1}`}
-          title={isAtMinCapacity ? 'At least one impact item is required' : undefined}
-        >
-          <DeleteIcon />
-        </IconButton>
-      </Box>
-    </Paper>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      {/* Numbered red badge, echoing the red impacts render with in the output */}
+      <ImpactNumberBadge number={index + 1} />
+
+      {/* Impact text field - single line, no wrapping - Requirements: 7.3, 7.4 */}
+      <TextField
+        placeholder="Impact statement"
+        value={item.text}
+        onChange={(e) => onTextChange(item.id, e.target.value)}
+        fullWidth
+        size="small"
+        error={hasError}
+        helperText={error ? <span id={`${idPrefix}-error`}>{error}</span> : undefined}
+        slotProps={{
+          htmlInput: {
+            maxLength: 500,
+            'aria-label': `Impact statement ${index + 1}`,
+            'aria-describedby': error ? `${idPrefix}-error` : `${idPrefix}-help`,
+            'aria-invalid': hasError,
+            style: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+          }
+        }}
+      />
+
+      {/* Screen-reader hint, rendered only while the field is valid; the error
+          variant is the helperText span above. */}
+      {!hasError && (
+        <span id={`${idPrefix}-help`} className="sr-only">
+          Describe one deployment impact for this change, up to 500 characters
+        </span>
+      )}
+
+      {/* Remove button - impacts are optional, so this is always enabled */}
+      <IconButton
+        onClick={() => onRemoveItem(item.id)}
+        color="error"
+        size="small"
+        aria-label={`Remove impact statement ${index + 1}`}
+      >
+        <DeleteIcon fontSize="small" />
+      </IconButton>
+    </Box>
   );
 });
 
 ImpactItemRow.displayName = 'ImpactItemRow';
 
 export interface ImpactSectionProps {
-  /** Current list of impact items (1-100 items) */
+  /** Index of the parent change item (used for unique ids and error field keys) */
+  changeItemIndex: number;
+  /** Current list of impact items for the parent change item (0-100 items) */
   impactItems: ImpactItem[];
-  /** Callback when impact items list changes */
+  /** Callback when the impact items list changes */
   onImpactItemsChange: (items: ImpactItem[]) => void;
-  /** Validation errors for impact items */
+  /** Validation errors for impact items, keyed by nested field path */
   errors?: Record<string, string>;
 }
 
 /**
- * ImpactSection component for managing deployment impact items
- * 
- * Performance: Memoized with React.memo and uses useCallback for handlers (22.2)
+ * ImpactSection component for managing a change item's impact items
+ *
+ * Performance: Memoized with React.memo and uses useCallback for handlers
  */
 function ImpactSectionComponent({
+  changeItemIndex,
   impactItems,
   onImpactItemsChange,
   errors = {}
 }: ImpactSectionProps) {
-  // Check if we're at maximum capacity (100 items) - Requirement 7.2
-  const isAtMaxCapacity = impactItems.length >= 100;
-  
-  // Check if we're at minimum capacity (1 item) - Requirement 7.6
-  const isAtMinCapacity = impactItems.length <= 1;
+  // Check if we're at maximum capacity (100 items per change item)
+  const isAtMaxCapacity = impactItems.length >= MAX_IMPACT_ITEMS;
 
   /**
    * Handle adding a new impact item
    * Requirements: 7.1, 7.2
-   * Memoized with useCallback (22.2: Performance optimization)
    */
   const handleAddItem = useCallback(() => {
-    if (isAtMaxCapacity) {
+    if (impactItems.length >= MAX_IMPACT_ITEMS) {
       return; // Already at max capacity
     }
-    
-    // Create new item with unique ID
-    const newItem: ImpactItem = {
-      id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      text: ''
-    };
-    
-    // Append to list (preserves insertion order - Requirement 7.8)
-    onImpactItemsChange([...impactItems, newItem]);
-  }, [impactItems.length, isAtMaxCapacity, onImpactItemsChange]);
+
+    // Append a new item (preserves insertion order - Requirement 7.8)
+    onImpactItemsChange([...impactItems, createNewImpactItem()]);
+  }, [impactItems, onImpactItemsChange]);
 
   /**
-   * Handle removing an impact item
-   * Requirements: 7.5, 7.6
-   * Memoized with useCallback (22.2: Performance optimization)
+   * Handle removing an impact item.
+   * Impacts are optional children, so removing the last item is allowed.
+   * Requirements: 7.5
    */
   const handleRemoveItem = useCallback((itemId: string) => {
-    if (isAtMinCapacity) {
-      return; // Cannot remove last item
-    }
-    
-    // Remove item by ID, preserving order of remaining items
     const updatedItems = impactItems.filter(item => item.id !== itemId);
     onImpactItemsChange(updatedItems);
-  }, [impactItems, isAtMinCapacity, onImpactItemsChange]);
+  }, [impactItems, onImpactItemsChange]);
 
   /**
    * Handle updating an impact item's text
    * Requirements: 7.3, 7.4
-   * Memoized with useCallback (22.2: Performance optimization)
    */
   const handleTextChange = useCallback((itemId: string, newText: string) => {
-    // Update the specific item, preserving order
     const updatedItems = impactItems.map(item =>
       item.id === itemId ? { ...item, text: newText } : item
     );
     onImpactItemsChange(updatedItems);
   }, [impactItems, onImpactItemsChange]);
 
+  const headingId = `change-${changeItemIndex}-impacts-heading`;
+
   return (
-    <Box sx={{ mb: 3 }} component="section" aria-labelledby="impact-items-heading">
-      <Typography variant="h6" gutterBottom id="impact-items-heading">
-        Impact Items
+    <Box
+      sx={{ mt: 2, pl: { xs: 0, sm: 2 }, borderLeft: { sm: '2px solid' }, borderColor: { sm: 'divider' } }}
+      component="section"
+      aria-labelledby={headingId}
+    >
+      <Typography
+        variant="subtitle2"
+        id={headingId}
+        sx={{ color: 'text.secondary', mb: 1 }}
+      >
+        Impacts
       </Typography>
 
       {/* Show maximum capacity message when at 100 items - Requirement 7.2 */}
       {isAtMaxCapacity && (
-        <Alert severity="warning" sx={{ mb: 2 }} role="alert" aria-live="polite">
-          Maximum 100 impact items reached
+        <Alert severity="warning" sx={{ mb: 1 }} role="alert" aria-live="polite">
+          Maximum {MAX_IMPACT_ITEMS} impact items reached
         </Alert>
       )}
 
       {/* ARIA live region for announcing add/remove actions */}
       <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
-        {impactItems.length} impact {impactItems.length === 1 ? 'item' : 'items'} in the list
+        {impactItems.length} impact {impactItems.length === 1 ? 'item' : 'items'} for this change
       </div>
 
       {/* List of impact items */}
-      {impactItems.map((item, index) => {
-        const fieldKey = `impactItems[${index}].text`;
-        const itemError = errors[fieldKey];
+      {impactItems.length > 0 && (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 1 }}>
+          {impactItems.map((item, index) => {
+            const fieldKey = `changeItems[${changeItemIndex}].impactItems[${index}].text`;
+            const itemError = errors[fieldKey];
+            const idPrefix = `change-${changeItemIndex}-impact-${index}`;
 
-        return (
-          <ImpactItemRow
-            key={item.id}
-            item={item}
-            index={index}
-            isAtMinCapacity={isAtMinCapacity}
-            error={itemError}
-            onTextChange={handleTextChange}
-            onRemoveItem={handleRemoveItem}
-          />
-        );
-      })}
+            return (
+              <ImpactItemRow
+                key={item.id}
+                item={item}
+                index={index}
+                idPrefix={idPrefix}
+                error={itemError}
+                onTextChange={handleTextChange}
+                onRemoveItem={handleRemoveItem}
+              />
+            );
+          })}
+        </Box>
+      )}
 
       {/* Add button - Requirements: 7.1, 7.2 */}
       <Button
-        variant="outlined"
+        variant="text"
+        size="small"
         startIcon={<AddIcon />}
         onClick={handleAddItem}
         disabled={isAtMaxCapacity}
-        sx={{ mt: 2 }}
-        fullWidth
+        sx={{ mt: impactItems.length > 0 ? 0 : 0.5 }}
       >
-        {isAtMaxCapacity ? 'Maximum 100 items reached' : 'Add Impact Item'}
+        {isAtMaxCapacity ? `Maximum ${MAX_IMPACT_ITEMS} items reached` : 'Add Impact'}
       </Button>
-      
-      {/* General validation error for impact items list */}
-      {errors['impactItems'] && (
-        <Alert severity="error" sx={{ mt: 2 }} role="alert" aria-live="polite">
-          {errors['impactItems']}
-        </Alert>
-      )}
     </Box>
   );
 }
 
-// Wrap component with React.memo to prevent re-renders (22.2: Performance optimization)
+// Wrap component with React.memo to prevent re-renders
 export const ImpactSection = memo(ImpactSectionComponent);

@@ -1,11 +1,11 @@
 /**
- * Formatting utilities for deployment notification generator
- * 
- * This file contains functions for generating titles, headers, and formatted strings
- * used in the deployment notification artifacts.
+ * Formatting utilities for TOWER
+ *
+ * Input masks, display formatting, HTML escaping, list rendering, and the
+ * template token injection used to produce the Flight Plan artifact.
  */
 
-import { DeploymentFormData, ChangeItem, ImpactItem } from '../types/models';
+import type { DeploymentFormData, ChangeItem, ImpactItem } from '../types/models';
 
 // ============================================================================
 // Phone Formatting
@@ -69,70 +69,38 @@ export function formatChangeNumber(changeNumber: string): string {
 }
 
 // ============================================================================
-// Title Generation Functions
+// Release Version Formatting
 // ============================================================================
 
 /**
- * Generates the deployment title in the required format
- * 
- * Format: CHG##### — Application Name: Release Version
- * 
- * Returns an empty string if any required component is missing:
- * - Application
- * - Change Number
- * - Release Version
- * 
- * Requirements: 2.4, 2.5, 3.6
- * 
- * @param data - The deployment form data
- * @returns The formatted deployment title, or empty string if incomplete
- * 
+ * Formats raw input into the Release Version mask "YYYY.#.#" as the user types.
+ *
+ * The release version is always a 4-digit year, a single-digit segment, and a
+ * final single-digit segment (e.g. "2025.4.1"). This helper is non-destructive
+ * and idempotent: it strips every non-digit, keeps at most 6 digits
+ * (4 for the year + 1 + 1), and re-inserts the dot separators. Dots are only
+ * added once a following digit exists, so there is never a dangling trailing
+ * dot while the user is mid-typing or after a backspace.
+ *
+ * @param input - The raw field value (may already contain dots/partial input)
+ * @returns The value formatted toward "YYYY.#.#", e.g. "2025.4.1"
+ *
  * @example
- * generateDeploymentTitle({
- *   application: { name: 'Crew Portal', ... },
- *   changeNumber: '12345',
- *   releaseVersion: 'v5.4.1',
- *   environment: 'PROD',
- *   ...
- * })
- * // Returns: "CHG12345 — Crew Portal: v5.4.1"
+ * formatReleaseVersion('2025')    // Returns: "2025"
+ * formatReleaseVersion('20254')   // Returns: "2025.4"
+ * formatReleaseVersion('2025.4.1')// Returns: "2025.4.1"
+ * formatReleaseVersion('abc2025x4-1') // Returns: "2025.4.1"
  */
-export function generateDeploymentTitle(data: DeploymentFormData): string {
-  // Check if all required components are present
-  if (!data.application || !data.changeNumber || !data.releaseVersion) {
-    return '';
-  }
-  
-  // Extract application name
-  const applicationName = data.application.name;
-  
-  // Build the title in the required format (without environment)
-  // CHG prefix is applied to the Change Number for display
-  // PI is shown in the notification header, so not repeated here
-  return `${formatChangeNumber(data.changeNumber)} — ${applicationName}`;
-}
+export function formatReleaseVersion(input: string): string {
+  const digits = input.replace(/\D/g, '').slice(0, 6);
+  const year = digits.slice(0, 4);
+  const minor = digits.slice(4, 5);
+  const patch = digits.slice(5, 6);
 
-/**
- * Generates the notification header for a given environment
- * 
- * The header follows the pattern: "{Environment} Deployment Notification"
- * 
- * Requirements: 2.5
- * 
- * @param _applicationName - The name of the application (not used, kept for backward compatibility)
- * @param environment - The deployment environment (PROD, QA, ITEST, DEV)
- * @returns The formatted notification header
- * 
- * @example
- * generateNotificationHeader('Crew Portal', 'PROD')
- * // Returns: "PROD Deployment Notification"
- */
-export function generateNotificationHeader(_applicationName: string, environment: string | null, piNumber: string = ''): string {
-  const piText = piNumber ? ` | PI ${piNumber}` : '';
-  if (environment) {
-    return `${environment} Deployment Notification${piText}`;
-  }
-  return `Deployment Notification${piText}`;
+  let result = year;
+  if (minor) result += `.${minor}`;
+  if (patch) result += `.${patch}`;
+  return result;
 }
 
 // ============================================================================
@@ -285,41 +253,47 @@ export function renderChangeItems(items: ChangeItem[]): string {
     .map(item => {
       const escapedJiraNumber = escapeHtml(item.jiraNumber);
       const escapedDescription = escapeHtml(item.description);
-      return `<div><strong>${escapedJiraNumber}</strong> ${escapedDescription}</div>`;
+      // Impact items are children of the change item and render nested beneath it
+      const impactsHtml = renderImpactItems(item.impactItems ?? []);
+      return `<div class="change-group"><div><strong>${escapedJiraNumber}</strong> ${escapedDescription}</div>${impactsHtml}</div>`;
     })
     .join('');
 }
 
 /**
- * Renders a list of Impact Items as an HTML unordered list
- * 
- * Format: <ul><li>{escapedText}</li>...</ul>
- * 
- * The order of items is preserved exactly as provided (insertion order).
- * All user text is HTML-escaped before rendering.
- * 
+ * Renders a change item's child Impact Items as an indented block of bullets.
+ *
+ * Impact items are children of a change item, so this is called while rendering
+ * each change item (see renderChangeItems) rather than as a standalone section.
+ * The order of items is preserved exactly as provided (insertion order), and all
+ * user text is HTML-escaped before rendering. An empty list renders nothing.
+ *
  * Requirements: 7.8
- * 
- * @param items - Array of Impact Items to render
- * @returns HTML string with unordered list of impact items
- * 
+ *
+ * @param items - Array of Impact Items belonging to a change item
+ * @returns HTML string with the indented impact bullets, or '' when there are none
+ *
  * @example
  * renderImpactItems([
  *   { id: '1', text: 'System will be unavailable during deployment' },
  *   { id: '2', text: 'Users may experience slower performance' }
  * ])
- * // Returns:
- * // "<ul>\n<li>System will be unavailable during deployment</li>\n<li>Users may experience slower performance</li>\n</ul>"
+ * // Returns an indented block:
+ * // "<div class=\"impact-sub\" style=\"margin:4px 0 10px 18px;\"><div>&bull; System will be unavailable during deployment</div>..."
  */
 export function renderImpactItems(items: ImpactItem[]): string {
+  if (!items || items.length === 0) {
+    return '';
+  }
+
   const listItems = items
     .map(item => {
       const escapedText = escapeHtml(item.text);
-      return `<div>• ${escapedText}</div>`;
+      return `<div>&bull; ${escapedText}</div>`;
     })
     .join('\n');
-  
-  return `${listItems}`;
+
+  return `<div class="impact-sub" style="margin:4px 0 10px 18px;">${listItems}</div>`;
 }
 
 /**
@@ -351,24 +325,21 @@ export function renderOutageIndicator(hasOutage: boolean): string {
  * This function replaces all template tokens with actual data from the deployment form.
  * Text tokens are HTML-escaped for security, while HTML tokens (like lists) are inserted verbatim.
  * 
- * Tokens replaced:
- * - {{NOTIFICATION_HEADER}} - Application-specific notification header
- * - {{DEPLOYMENT_TITLE}} - Computed deployment title
- * - {{DEPLOYMENT_SUBTITLE}} - Change number (deployment ID)
- * - {{SCHEDULE}} - Formatted deployment date and time window
- * - {{OUTAGE_INDICATOR}} - Outage Yes/No indicator
- * - {{OUTAGE_BLOCK}} - Formatted outage window (or empty if no outage)
- * - {{JIRA_ITEMS}} - Rendered HTML list of change items (Jira items)
- * - {{IMPACT_ITEMS}} - Rendered HTML unordered list of impact items
- * - {{CONTACT}} - Contact information block (name, email, phone)
- * 
- * Also supports legacy token names for backward compatibility:
- * - {{DEPLOYMENT_ID}} → {{DEPLOYMENT_SUBTITLE}}
- * - {{DEPLOYMENT_SCHEDULE}} → {{SCHEDULE}}
- * - {{OUTAGE_WINDOW}} → {{OUTAGE_BLOCK}}
- * - {{CHANGE_ITEMS}} → {{JIRA_ITEMS}}
- * - {{CONTACT_NAME}}, {{CONTACT_EMAIL}}, {{CONTACT_PHONE}} → {{CONTACT}}
- * 
+ * This is the complete token contract between this function and
+ * `public/templates/flight-plan.html`. Every token below appears in the
+ * template, and the template contains no token that is not listed here:
+ *
+ * | Token                  | Value                                              | Escaped |
+ * |------------------------|----------------------------------------------------|---------|
+ * | {{APPLICATION}}        | Application name                                   | yes     |
+ * | {{ENVIRONMENT}}        | Environment (PROD rendered as PRODUCTION)          | yes     |
+ * | {{CHANGE_NUMBER}}      | Change number, CHG-prefixed                        | yes     |
+ * | {{RELEASE}}            | Release line, "PI {YYYY.#.#}"                      | yes     |
+ * | {{SCHEDULE}}           | Formatted deployment date and time window          | n/a     |
+ * | {{OUTAGE_INDICATOR}}   | "Yes" or "No"                                      | n/a     |
+ * | {{JIRA_ITEMS}}         | Change-item markup, each with its nested impacts   | pre-escaped HTML |
+ * | {{CONTACT}}            | Contact block (name, email, optional phone)        | pre-escaped HTML |
+ *
  * Requirements: 10.4
  * 
  * @param template - The HTML template string containing tokens
@@ -376,26 +347,18 @@ export function renderOutageIndicator(hasOutage: boolean): string {
  * @returns The populated HTML template with all tokens replaced
  * 
  * @example
- * const template = '<h1>{{NOTIFICATION_HEADER}}</h1><p>{{DEPLOYMENT_TITLE}}</p>';
+ * const template = '<p>{{APPLICATION}}</p><p>{{CHANGE_NUMBER}}</p><p>{{RELEASE}}</p>';
  * const data = {
- *   application: { name: 'Crew Portal', notificationHeader: 'Crew Portal Deployment' },
+ *   application: { name: 'Crew Portal' },
  *   changeNumber: '12345',
- *   releaseVersion: 'v5.4.1',
+ *   releaseVersion: '2025.4.1',
  *   environment: 'PROD',
  *   // ... other fields
  * };
  * const result = injectTemplate(template, data);
- * // Returns: '<h1>Crew Portal Deployment</h1><p>[CHG12345] — [Crew Portal: v5.4.1 - Deploy to PROD]</p>'
+ * // Returns: '<p>Crew Portal</p><p>CHG12345</p><p>PI 2025.4.1</p>'
  */
 export function injectTemplate(template: string, data: DeploymentFormData): string {
-  // Generate notification header
-  const notificationHeader = data.application 
-    ? generateNotificationHeader(data.application.name, data.environment, data.releaseVersion)
-    : '';
-  
-  // Generate deployment title
-  const deploymentTitle = generateDeploymentTitle(data);
-  
   // Format deployment schedule
   const deploymentSchedule = formatSchedule(
     data.startDateTime,
@@ -405,47 +368,50 @@ export function injectTemplate(template: string, data: DeploymentFormData): stri
   // Render outage indicator (Yes/No)
   const outageIndicator = renderOutageIndicator(data.hasOutage);
   
-  // Render change items as HTML
+  // Render change items as HTML (each change renders its nested impact items)
   const changeItemsHtml = renderChangeItems(data.changeItems);
-  
-  // Render impact items as HTML
-  const impactItemsHtml = renderImpactItems(data.impactItems);
   
   // Escape text tokens for security
   // CHG prefix is applied to the Change Number for HTML output display
   const escapedChangeNumber = escapeHtml(formatChangeNumber(data.changeNumber));
+  // Application name (empty string when no application is selected)
+  const escapedApplication = escapeHtml(data.application?.name ?? '');
+  // Environment (PROD/QA/ITEST/DEV); empty string when not selected.
+  // PROD is expanded to PRODUCTION for display.
+  const environmentDisplay = data.environment === 'PROD' ? 'PRODUCTION' : (data.environment ?? '');
+  const escapedEnvironment = escapeHtml(environmentDisplay);
+  // Release line: "PI {YYYY.#.#}"
+  const releaseLine =
+    data.application && data.releaseVersion
+      ? `PI ${data.releaseVersion}`
+      : '';
+  const escapedRelease = escapeHtml(releaseLine);
   const escapedContactName = escapeHtml(data.contactName);
   const escapedContactEmail = escapeHtml(data.contactEmail);
-  const escapedContactPhone = escapeHtml(data.contactPhone);
+  // Phone is optional: treat a blank/whitespace-only value as "not provided".
+  const hasContactPhone = (data.contactPhone ?? '').trim().length > 0;
+  const escapedContactPhone = hasContactPhone ? escapeHtml(data.contactPhone) : '';
   
-  // Build contact block (HTML-escaped individual fields combined)
-  const contactBlock = `${escapedContactName}<br>${escapedContactEmail}<br>${escapedContactPhone}`;
+  // Build contact block (HTML-escaped individual fields combined).
+  // Omit the phone line entirely when no phone was provided so no dangling <br> appears.
+  const contactBlock = [escapedContactName, escapedContactEmail, escapedContactPhone]
+    .filter((part) => part.length > 0)
+    .join('<br>');
   
   // Replace all tokens in the template
   let result = template;
   
   // Replace text tokens (escaped)
-  result = result.replace(/\{\{NOTIFICATION_HEADER\}\}/g, notificationHeader);
-  result = result.replace(/\{\{DEPLOYMENT_TITLE\}\}/g, deploymentTitle);
-  result = result.replace(/\{\{DEPLOYMENT_SUBTITLE\}\}/g, escapedChangeNumber);
+  result = result.replace(/\{\{APPLICATION\}\}/g, escapedApplication);
+  result = result.replace(/\{\{CHANGE_NUMBER\}\}/g, escapedChangeNumber);
   result = result.replace(/\{\{SCHEDULE\}\}/g, deploymentSchedule);
   result = result.replace(/\{\{OUTAGE_INDICATOR\}\}/g, outageIndicator);
-  
+  result = result.replace(/\{\{ENVIRONMENT\}\}/g, escapedEnvironment);
+  result = result.replace(/\{\{RELEASE\}\}/g, escapedRelease);
+
   // Replace HTML tokens (verbatim - already contains safe HTML)
-  // OUTAGE_BLOCK/OUTAGE_WINDOW is empty since outage dates are no longer tracked separately
-  result = result.replace(/\{\{OUTAGE_BLOCK\}\}/g, '');
   result = result.replace(/\{\{JIRA_ITEMS\}\}/g, changeItemsHtml);
-  result = result.replace(/\{\{IMPACT_ITEMS\}\}/g, impactItemsHtml);
   result = result.replace(/\{\{CONTACT\}\}/g, contactBlock);
-  
-  // Support legacy token names for backward compatibility
-  result = result.replace(/\{\{DEPLOYMENT_ID\}\}/g, escapedChangeNumber);
-  result = result.replace(/\{\{DEPLOYMENT_SCHEDULE\}\}/g, deploymentSchedule);
-  result = result.replace(/\{\{OUTAGE_WINDOW\}\}/g, '');
-  result = result.replace(/\{\{CHANGE_ITEMS\}\}/g, changeItemsHtml);
-  result = result.replace(/\{\{CONTACT_NAME\}\}/g, escapedContactName);
-  result = result.replace(/\{\{CONTACT_EMAIL\}\}/g, escapedContactEmail);
-  result = result.replace(/\{\{CONTACT_PHONE\}\}/g, escapedContactPhone);
-  
+
   return result;
 }

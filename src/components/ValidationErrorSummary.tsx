@@ -15,10 +15,8 @@ import { Error as ErrorIcon } from '@mui/icons-material';
 import type { ValidationError } from '../types/models';
 
 export interface ValidationErrorSummaryProps {
-  /** Array of validation errors for this form */
+  /** Array of validation errors for the form */
   errors: ValidationError[];
-  /** Form number for display (1-indexed) */
-  formNumber: number;
 }
 
 /**
@@ -31,8 +29,7 @@ export interface ValidationErrorSummaryProps {
  * - Wrapped with React.memo to prevent re-renders when parent changes (22.2)
  */
 function ValidationErrorSummaryComponent({
-  errors,
-  formNumber
+  errors
 }: ValidationErrorSummaryProps) {
   // Don't render if no errors
   if (errors.length === 0) {
@@ -45,6 +42,15 @@ function ValidationErrorSummaryComponent({
   const getFieldLabel = (field: string): string => {
     // Handle array fields (e.g., "changeItems[0].jiraNumber")
     if (field.includes('[')) {
+      // Handle nested impact fields first (e.g. "changeItems[0].impactItems[1].text")
+      const nestedMatch = field.match(/changeItems\[(\d+)\]\.impactItems\[(\d+)\]\.(\w+)/);
+      if (nestedMatch) {
+        const [, changeIndex, impactIndex] = nestedMatch;
+        const changeNum = Number(changeIndex) + 1;
+        const impactNum = Number(impactIndex) + 1;
+        return `Change Item ${changeNum} \u203a Impact ${impactNum}`;
+      }
+
       // Parse the field to extract item index and sub-field
       const match = field.match(/(\w+)\[(\d+)\]\.(\w+)/);
       if (match) {
@@ -60,7 +66,8 @@ function ValidationErrorSummaryComponent({
         const subFieldLabels: Record<string, string> = {
           jiraNumber: 'Jira Number',
           description: 'Title/Description',
-          text: 'Text'
+          text: 'Text',
+          impactItems: 'Impact Items'
         };
         
         const arrayLabel = arrayName ? (arrayLabels[arrayName] || arrayName) : 'Item';
@@ -90,19 +97,19 @@ function ValidationErrorSummaryComponent({
   };
 
   /**
-   * Format error message to be more user-friendly
+   * Format error message to be more user-friendly.
+   *
+   * The field label is already shown alongside the message, so a bare
+   * "... is required" / "Please select ..." is collapsed to a single phrase.
+   * Everything else is shown verbatim: the '#' characters in the phone and
+   * release-version format hints are part of the mask the user has to match.
    */
   const formatErrorMessage = (message: string): string => {
-    // Remove '#' symbols from message
-    const cleanMessage = message.replace(/#/g, '');
-    
-    // Handle "is required" or "Please select" messages
-    if (cleanMessage.includes('is required') || cleanMessage.includes('Please select')) {
+    if (message.includes('is required') || message.includes('Please select')) {
       return 'This field is required';
     }
-    
-    // Return cleaned message as-is if it doesn't match known patterns
-    return cleanMessage;
+
+    return message;
   };
 
   return (
@@ -114,8 +121,8 @@ function ValidationErrorSummaryComponent({
       aria-live="assertive"
       aria-atomic="true"
     >
-      <AlertTitle sx={{ fontWeight: 'bold' }}>
-        Validation Errors in Deployment Form {formNumber}
+      <AlertTitle sx={{ fontWeight: 600 }}>
+        Validation Errors in Deployment Form
       </AlertTitle>
       
       <Typography variant="body2" sx={{ mb: 1 }}>

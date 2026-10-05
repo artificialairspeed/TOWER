@@ -3,9 +3,8 @@
  *
  * Provides the Material-UI theme for the portal UI.
  *
- * The portal is dark-mode only (both the app UI and the generated outputs use
- * dark mode). The `theme` prop is retained for API compatibility, but the portal
- * always renders the dark palette regardless of its value.
+ * The portal is dark-mode only: both the app UI and the generated outputs use
+ * the dark palette, and there is no theme selection.
  *
  * Colors follow the Southwest Airlines "Jetstream" (V5+) design system: a deep
  * navy "steel" surface scale and SWA blue as the primary accent for buttons,
@@ -19,11 +18,8 @@
 import React from 'react';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import type { Theme } from '../types/models';
 
 interface AppThemeProviderProps {
-  /** Retained for API compatibility. The portal always renders dark mode. */
-  theme?: Theme;
   children: React.ReactNode;
 }
 
@@ -50,7 +46,6 @@ export const darkTokens = {
   // No longer wired into palette.primary; kept as tokens for that one button.
   swaYellow: 'rgb(255, 191, 0)', // swaYellow500 (main)
   swaYellowDark: 'rgb(255, 174, 0)', // swaYellow400 (dark / hover)
-  swaYellowLight: 'rgb(255, 204, 51)', // swaYellow600 (light)
   swaYellowContrast: 'rgb(21, 39, 63)', // dark navy text on yellow
 
   // Secondary accent — blue (secondary / outlined controls, links, focus rings)
@@ -156,7 +151,13 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
       typography: {
         fontFamily: OPEN_SANS_FONT_FAMILY,
         fontSize: 16,
+        // Jetstream permits only two weights, 400 and 600, and index.html
+        // requests only those two faces. Pinning MUI's medium/bold keys to 600
+        // keeps every emphasis path on a real face instead of a synthesized
+        // 700, and matches public/templates/flight-plan.html.
         fontWeightRegular: 400,
+        fontWeightMedium: 600,
+        fontWeightBold: 600,
         body1: {
           fontFamily: OPEN_SANS_FONT_FAMILY,
           fontSize: '1rem',
@@ -221,6 +222,11 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
             // Universal selector to guarantee no other fonts slip through
             '*': {
               fontFamily: `${OPEN_SANS_FONT_FAMILY} !important`,
+            },
+            // Native emphasis pinned to 600 (the browser default of 700 has no
+            // embedded face), matching the same rule in the flight-plan template.
+            'strong, b': {
+              fontWeight: 600,
             },
             'a, button, [role="button"], input, select, textarea, [tabindex]': {
               '&:focus-visible': {

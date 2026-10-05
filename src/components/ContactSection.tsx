@@ -4,7 +4,7 @@
  * Provides input controls for contact information:
  * - Contact Name (max 255 chars, required)
  * - Email (max 255 chars, required, format validation)
- * - Phone (max 255 chars, required, any format; normalized to (###) ###-####)
+ * - Phone (max 255 chars, optional; when provided, normalized to (###) ###-####)
  * - Display format errors adjacent to fields
  * - Display required errors adjacent to fields
  * - Preserve entered values when validation fails
@@ -75,6 +75,9 @@ function ContactSectionComponent({
             onChange={(e) => onContactNameChange(e.target.value)}
             onBlur={() => onBlurValidate?.('contactName', contactName)}
             error={!!contactNameError}
+            helperText={
+              contactNameError ? <span id="contact-name-error">{contactNameError}</span> : undefined
+            }
             slotProps={{
               htmlInput: {
                 maxLength: 255,
@@ -87,6 +90,11 @@ function ContactSectionComponent({
               }
             }}
           />
+          {!contactNameError && (
+            <span id="contact-name-help" className="sr-only">
+              Enter the name of the person to contact about this deployment
+            </span>
+          )}
         </Box>
 
         {/* Email Input - Requirements: 8.1, 8.2, 8.4 */}
@@ -100,6 +108,11 @@ function ContactSectionComponent({
             onChange={(e) => onContactEmailChange(e.target.value)}
             onBlur={() => onBlurValidate?.('contactEmail', contactEmail)}
             error={!!contactEmailError}
+            helperText={
+              contactEmailError ? (
+                <span id="contact-email-error">{contactEmailError}</span>
+              ) : undefined
+            }
             slotProps={{
               htmlInput: {
                 maxLength: 255,
@@ -112,25 +125,31 @@ function ContactSectionComponent({
               }
             }}
           />
+          {!contactEmailError && (
+            <span id="contact-email-help" className="sr-only">
+              Enter the contact email address, for example name@example.com
+            </span>
+          )}
         </Box>
 
         {/* Phone Input - Requirements: 8.1, 8.4 */}
-        {/* Only allows 10-digit phone numbers, accepts numerics only on input */}
+        {/* Optional field. Input is normalized to at most 10 digits as the user
+            types, then reformatted to (###) ###-#### on blur. */}
         <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 33.33%' } }}>
           <TextField
             fullWidth
-            required
             type="tel"
             label="Phone"
             value={contactPhone}
             onChange={(e) => {
-              // Only allow digits
-              const input = e.target.value;
-              const digitsOnly = input.replace(/\D/g, '');
-              
-              // Accept only if input is digits and at most 10 digits
-              if (digitsOnly.length <= 10 && digitsOnly === input) {
-                onContactPhoneChange(input);
+              // Normalize to digits rather than rejecting non-digit input. The
+              // onBlur handler rewrites the value to "(555) 123-4567", so a
+              // digits-only guard would reject every subsequent edit of an
+              // already-formatted number.
+              const digitsOnly = e.target.value.replace(/\D/g, '');
+
+              if (digitsOnly.length <= 10) {
+                onContactPhoneChange(digitsOnly);
               }
             }}
             onBlur={(e) => {
@@ -141,9 +160,16 @@ function ContactSectionComponent({
               onBlurValidate?.('contactPhone', formatted);
             }}
             error={!!contactPhoneError}
+            helperText={
+              contactPhoneError ? (
+                <span id="contact-phone-error">{contactPhoneError}</span>
+              ) : undefined
+            }
             slotProps={{
               htmlInput: {
-                maxLength: 10,
+                // Wide enough to hold the formatted "(555) 123-4567" value so
+                // the field stays editable after onBlur reformats it.
+                maxLength: 14,
                 placeholder: '5551234567',
                 'aria-label': 'Contact phone number',
                 'aria-describedby': contactPhoneError ? 'contact-phone-error' : 'contact-phone-help',
@@ -154,6 +180,12 @@ function ContactSectionComponent({
               }
             }}
           />
+          {!contactPhoneError && (
+            <span id="contact-phone-help" className="sr-only">
+              Optional. Enter 10 digits; the number is reformatted as (555) 123-4567 when you leave
+              the field.
+            </span>
+          )}
         </Box>
       </Box>
     </Box>
